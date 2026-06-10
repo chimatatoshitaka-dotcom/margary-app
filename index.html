@@ -387,26 +387,7 @@
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="screen-login" class="screen active">
-  <div class="login-wrap">
-    <div class="login-logo">Margary</div>
-    <div class="login-sub">Stock Management</div>
-    <div class="login-card">
-      <h2>スタッフログイン</h2>
-      <div id="login-error" class="error-msg" style="display:none"></div>
-      <div class="form-group">
-        <label>ユーザー名</label>
-        <input type="text" id="username" placeholder="staff01" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label>パスワード</label>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button class="btn btn-primary" onclick="doLogin()">ログイン</button>
-    </div>
-  </div>
-</div>
+<!-- LOGIN SCREEN REMOVED -->
 
 <!-- SETTINGS SCREEN -->
 <div id="screen-settings" class="screen">
@@ -459,11 +440,11 @@
 </div>
 
 <!-- MAIN APP SCREEN -->
-<div id="screen-app" class="screen">
+<div id="screen-app" class="screen active">
   <div class="header">
     <div class="header-logo">Margary</div>
     <div class="header-user">
-      <span id="header-username"></span>
+      
       <button class="settings-btn" onclick="showSettings()">⚙️ 設定</button>
       <button class="logout-btn" onclick="doLogout()">ログアウト</button>
     </div>
@@ -639,12 +620,7 @@
 const NOTION_DS_PRODUCTS = '9e95822d-a525-42c7-81da-c2b725c649a5';
 const NOTION_DS_INVENTORY = 'c55bd93b-3920-410e-b21a-88b828408130';
 
-// ── Staff accounts (簡易認証) ──
-const STAFF = {
-  'margary': { password: 'margary2026', name: 'Margary Staff' },
-  'staff01': { password: 'staff2026',   name: 'スタッフ 01' },
-  'staff02': { password: 'staff2026',   name: 'スタッフ 02' },
-};
+// ── No login required ──
 
 // ── State ──
 let currentUser = null;
@@ -719,31 +695,19 @@ function checkApiKeys() {
   return true;
 }
 
-// ── Login ──
-function doLogin() {
-  const u = document.getElementById('username').value.trim();
-  const p = document.getElementById('password').value;
-  const staff = STAFF[u];
-  if (staff && staff.password === p) {
-    currentUser = { id: u, name: staff.name };
-    document.getElementById('header-username').textContent = staff.name;
-    showScreen('screen-app');
-    loadApiKeys();
-    if (!anthropicApiKey || !notionApiKey) {
-      setTimeout(() => showSettings(), 500);
-    }
-  } else {
-    const err = document.getElementById('login-error');
-    err.textContent = 'ユーザー名またはパスワードが違います';
-    err.style.display = 'block';
-  }
+// ── Auto init ──
+function doLogout() {
+  resetApp();
 }
 
-function doLogout() {
-  currentUser = null;
-  resetApp();
-  showScreen('screen-login');
-}
+window.addEventListener('DOMContentLoaded', () => {
+  currentUser = { id: 'staff', name: 'Staff' };
+  document.getElementById('header-username').textContent = '';
+  loadApiKeys();
+  if (!anthropicApiKey || !notionApiKey) {
+    setTimeout(() => showSettings(), 500);
+  }
+});
 
 // ── Screen control ──
 function showScreen(id) {
@@ -928,7 +892,7 @@ async function registerToNotion() {
   const color = document.getElementById('f-color').value.trim();
   const price = parseFloat(document.getElementById('f-price').value) || 0;
   const productName = `${sku}_${color.replace(/ /g,'-')}_€${price}`;
-  const memo = `買付アカウント: ${document.getElementById('f-account').value === 'M' ? 'Margary（M）' : 'その他'} / ${color} / 登録者: ${currentUser.name}${document.getElementById('f-memo').value ? ' / ' + document.getElementById('f-memo').value : ''}`;
+  const memo = `買付アカウント: ${document.getElementById('f-account').value === 'M' ? 'Margary（M）' : 'その他'} / ${color} / 登録者: Staff${document.getElementById('f-memo').value ? ' / ' + document.getElementById('f-memo').value : ''}`;
 
   try {
     const response = await fetch('/api/analyze', {
@@ -995,12 +959,7 @@ function resetApp() {
   document.getElementById('step4').style.display = 'none';
 }
 
-// Enter key on login
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('screen-login').classList.contains('active')) {
-    doLogin();
-  }
-});
+
 </script>
 </body>
 </html>
