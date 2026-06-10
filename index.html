@@ -707,6 +707,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (!anthropicApiKey) {
     setTimeout(() => showSettings(), 500);
   }
+  // 価格入力のイベントリスナーは一度だけ登録
+  document.getElementById('f-price').addEventListener('input', updatePricePreview);
 });
 
 // ── Screen control ──
@@ -823,18 +825,14 @@ JSONのみ返してください。`;
 // ── Fill form ──
 function fillForm(d) {
   if (d.brand) setSelect('f-brand', d.brand);
-  if (d.sku) document.getElementById('f-sku').value = d.sku;
-  if (d.model) document.getElementById('f-model').value = d.model;
-  if (d.color) document.getElementById('f-color').value = d.color;
+  document.getElementById('f-sku').value = d.sku || '';
+  document.getElementById('f-model').value = d.model || '';
+  document.getElementById('f-color').value = d.color || '';
   if (d.category) setSelect('f-category', d.category);
-  if (d.price_eur) {
-    document.getElementById('f-price').value = d.price_eur;
-    updatePricePreview();
-  }
-  if (d.date) document.getElementById('f-date').value = d.date;
-
-  // Price live update
-  document.getElementById('f-price').addEventListener('input', updatePricePreview);
+  document.getElementById('f-price').value = d.price_eur || '';
+  document.getElementById('f-date').value = d.date || '';
+  document.getElementById('f-memo').value = '';
+  updatePricePreview();
 }
 
 function setSelect(id, val) {
@@ -956,11 +954,18 @@ function resetApp() {
   document.getElementById('preview-grid').innerHTML = '';
   document.getElementById('preview-grid').style.display = 'none';
   document.getElementById('analyze-section').style.display = 'none';
-  document.getElementById('file-input').value = '';
+  const camInput = document.getElementById('file-input-camera');
+  const libInput = document.getElementById('file-input-library');
+  if (camInput) camInput.value = '';
+  if (libInput) libInput.value = '';
   document.getElementById('register-error').style.display = 'none';
   document.getElementById('register-success').style.display = 'none';
   document.getElementById('register-btn').disabled = false;
   document.getElementById('register-btn').textContent = '✅ Notionに登録する';
+
+  fillForm({});
+  document.getElementById('f-stock').value = '0';
+  document.getElementById('price-preview').style.display = 'none';
 
   document.getElementById('step1').style.display = 'block';
   document.getElementById('step2').style.display = 'none';
