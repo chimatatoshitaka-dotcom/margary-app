@@ -824,6 +824,7 @@ JSONのみ返してください。`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        action: 'analyze',
         images: uploadedImages.map(img => ({
           mediaType: img.file.type || 'image/jpeg',
           data: img.base64.split(',')[1]
