@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Margary — 商品登録</title>
+<style>
+  :root {
+    --cream: #F7F5F0;
+    --charcoal: #1C1C1C;
+    --gold: #B8963E;
+    --gold-light: #D4AF6A;
+    --red: #C0392B;
+    --green: #27AE60;
+    --border: #E0DDD8;
+    --muted: #8A8680;
+    --white: #FFFFFF;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Sans', sans-serif;
+    background: var(--cream);
+    color: var(--charcoal);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--charcoal);
+    color: var(--white);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo {
+    font-size: 18px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold-light);
+  }
+  .header-user {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logout-btn {
+    background: none;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .settings-btn {
+    background: none;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-right: 6px;
+  }
+  .api-status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+  .api-status.ok { background: var(--green); }
+  .api-status.ng { background: var(--red); }
+
+  /* ── Screen ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Login ── */
+  .login-wrap {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    background: var(--charcoal);
+  }
+  .login-logo {
+    font-size: 28px;
+    font-weight: 200;
+    letter-spacing: 6px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .login-sub {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+  .login-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .login-card h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 24px;
+    color: var(--charcoal);
+  }
+
+  /* ── Forms ── */
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--white);
+    color: var(--charcoal);
+    -webkit-appearance: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--white);
+  }
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--charcoal);
+    border: 1px solid var(--border);
+    margin-top: 10px;
+  }
+  .btn-success {
+    background: var(--green);
+    color: var(--white);
+  }
+  .btn-danger {
+    background: var(--red);
+    color: var(--white);
+    margin-top: 10px;
+  }
+
+  .error-msg {
+    background: #FDECEA;
+    color: var(--red);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .success-msg {
+    background: #E8F8EE;
+    color: var(--green);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Main content ── */
+  .content { padding: 20px; max-width: 600px; margin: 0 auto; }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--white);
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 20px;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: #FFFDF7;
+  }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .upload-sub { font-size: 13px; color: var(--muted); }
+
+  /* ── Image previews ── */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--border);
+  }
+  .preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .preview-item .remove-img {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── AI result card ── */
+  .ai-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .ai-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .ai-badge {
+    background: var(--gold);
+    color: white;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .ai-card-header span {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ── Step indicator ── */
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 24px;
+  }
+  .step {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 4px;
+    border-bottom: 2px solid var(--border);
+    transition: all 0.2s;
+  }
+  .step.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+    font-weight: 600;
+  }
+  .step.done {
+    color: var(--green);
+    border-bottom-color: var(--green);
+  }
+
+  /* ── Loading ── */
+  .loading-wrap {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 14px; }
+
+  /* ── Result summary ── */
+  .result-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .result-icon { font-size: 48px; margin-bottom: 16px; }
+  .result-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .result-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+  .result-detail {
+    background: var(--cream);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 2;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .price-calc {
+    background: #FFFDF7;
+    border: 1px solid var(--gold-light);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .price-calc .ref-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-logo">Margary</div>
+    <div class="login-sub">Stock Management</div>
+    <div class="login-card">
+      <h2>スタッフログイン</h2>
+      <div id="login-error" class="error-msg" style="display:none"></div>
+      <div class="form-group">
+        <label>ユーザー名</label>
+        <input type="text" id="username" placeholder="staff01" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>パスワード</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div id="screen-settings" class="screen">
+  <div class="header">
+    <div class="header-logo">Margary</div>
+    <div class="header-user">
+      <button class="logout-btn" onclick="hideSettings()">← 戻る</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="ai-card">
+      <div class="section-title" style="margin-bottom:16px">⚙️ API設定</div>
+
+      <div class="form-group">
+        <label>
+          <span class="api-status" id="anthropic-status"></span>
+          Anthropic APIキー
+        </label>
+        <input type="password" id="s-anthropic-key" placeholder="sk-ant-api03-...">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+          console.anthropic.com → API Keys で取得
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <span class="api-status" id="notion-status"></span>
+          Notion Integration Token
+        </label>
+        <input type="password" id="s-notion-key" placeholder="secret_...">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+          notion.so/my-integrations で取得
+        </div>
+      </div>
+
+      <div id="settings-msg" style="display:none;margin-bottom:12px"></div>
+
+      <button class="btn btn-primary" onclick="saveSettings()">保存する</button>
+      <button class="btn btn-secondary" onclick="hideSettings()">キャンセル</button>
+    </div>
+
+    <div class="ai-card" style="margin-top:16px">
+      <div class="section-title" style="margin-bottom:12px">📋 設定状況</div>
+      <div style="font-size:13px;line-height:2.2">
+        <span class="api-status" id="check-anthropic"></span> Anthropic APIキー<br>
+        <span class="api-status" id="check-notion"></span> Notion Token
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP SCREEN -->
+<div id="screen-app" class="screen">
+  <div class="header">
+    <div class="header-logo">Margary</div>
+    <div class="header-user">
+      <span id="header-username"></span>
+      <button class="settings-btn" onclick="showSettings()">⚙️ 設定</button>
+      <button class="logout-btn" onclick="doLogout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- STEP 1: Upload -->
+    <div id="step1">
+      <div class="steps">
+        <div class="step active">① 画像</div>
+        <div class="step">② 確認・修正</div>
+        <div class="step">③ 登録</div>
+      </div>
+
+      <div class="section-title">商品・ラベル画像をアップロード</div>
+
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" multiple accept="image/*" onchange="handleFiles(this.files)">
+        <div class="upload-icon">📷</div>
+        <div class="upload-title">画像を選択またはカメラで撮影</div>
+        <div class="upload-sub">ラベル・商品写真を複数枚選択できます</div>
+      </div>
+
+      <div id="preview-grid" class="preview-grid" style="display:none"></div>
+
+      <div id="analyze-section" style="display:none">
+        <div class="price-calc">
+          <div style="font-size:12px;color:var(--muted)">AIがラベルから自動抽出します</div>
+          <div style="font-size:13px;margin-top:4px">品番・ブランド・価格・カラーを読み取ります</div>
+        </div>
+        <button class="btn btn-primary" id="analyze-btn" onclick="analyzeImages()">
+          🤖 AIで自動読み取り
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Confirm / Edit -->
+    <div id="step2" style="display:none">
+      <div class="steps">
+        <div class="step done">① 画像</div>
+        <div class="step active">② 確認・修正</div>
+        <div class="step">③ 登録</div>
+      </div>
+
+      <div id="loading-wrap" class="loading-wrap" style="display:none">
+        <div class="spinner"></div>
+        <div class="loading-text">ラベルを解析中...</div>
+      </div>
+
+      <div id="edit-form" style="display:none">
+        <div class="ai-card">
+          <div class="ai-card-header">
+            <span class="ai-badge">AI抽出</span>
+            <span>内容を確認・修正してください</span>
+          </div>
+
+          <div class="form-group">
+            <label>ブランド</label>
+            <select id="f-brand">
+              <option>LOEWE</option><option>PRADA</option><option>MIU MIU</option>
+              <option>GUCCI</option><option>CELINE</option><option>BOTTEGA VENETA</option>
+              <option>SAINT LAURENT</option><option>BURBERRY</option><option>FENDI</option>
+              <option>VALENTINO</option><option>その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>品番</label>
+            <input type="text" id="f-sku" placeholder="例: B906Q63X04">
+          </div>
+          <div class="form-group">
+            <label>モデル名</label>
+            <input type="text" id="f-model" placeholder="例: CUBI CROSSBODY">
+          </div>
+          <div class="form-group">
+            <label>カラー</label>
+            <input type="text" id="f-color" placeholder="例: ASPHALT GREY">
+          </div>
+          <div class="form-group">
+            <label>カテゴリ</label>
+            <select id="f-category">
+              <option>バッグ</option><option>財布・小物</option><option>シューズ</option>
+              <option>アクセサリー</option><option>アパレル</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>アウトレット価格（EUR）</label>
+            <input type="number" id="f-price" placeholder="例: 1050" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>仕入れ日</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="form-group">
+            <label>仕入れ店舗</label>
+            <select id="f-store">
+              <option>Las Rozas Village</option><option>La Roca Village</option>
+              <option>その他アウトレット</option><option>直営店</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>買付アカウント</label>
+            <select id="f-account">
+              <option value="M">Margary（M）</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>在庫数</label>
+            <input type="number" id="f-stock" value="0" min="0">
+          </div>
+          <div class="form-group">
+            <label>サイズ</label>
+            <select id="f-size">
+              <option>フリー</option><option>XS</option><option>S</option><option>M</option>
+              <option>L</option><option>XL</option><option>35</option><option>36</option>
+              <option>37</option><option>38</option><option>39</option><option>40</option>
+              <option>41</option><option>42</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>メモ</label>
+            <textarea id="f-memo" placeholder="特記事項があれば"></textarea>
+          </div>
+
+          <div id="price-preview" class="price-calc" style="display:none">
+            <div style="font-size:12px;color:var(--muted)">参考価格（円）※ 1EUR = 190円</div>
+            <div class="ref-price" id="ref-price-display">¥0</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="goToStep3()">次へ → 登録確認</button>
+        <button class="btn btn-secondary" onclick="resetApp()">← やり直す</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Confirm & Register -->
+    <div id="step3" style="display:none">
+      <div class="steps">
+        <div class="step done">① 画像</div>
+        <div class="step done">② 確認・修正</div>
+        <div class="step active">③ 登録</div>
+      </div>
+
+      <div class="ai-card">
+        <div class="section-title">登録内容の確認</div>
+        <div id="confirm-summary" class="result-detail"></div>
+        <div id="register-error" class="error-msg" style="display:none"></div>
+        <div id="register-success" class="success-msg" style="display:none"></div>
+        <button class="btn btn-success" id="register-btn" onclick="registerToNotion()">
+          ✅ Notionに登録する
+        </button>
+        <button class="btn btn-secondary" onclick="goBackToStep2()">← 修正する</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Done -->
+    <div id="step4" style="display:none">
+      <div class="result-card">
+        <div class="result-icon">✅</div>
+        <div class="result-title">登録完了！</div>
+        <div class="result-sub" id="done-message"></div>
+        <div id="done-detail" class="result-detail"></div>
+        <button class="btn btn-primary" onclick="resetApp()">続けて登録する</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Config ──
+const NOTION_DS_PRODUCTS = '9e95822d-a525-42c7-81da-c2b725c649a5';
+const NOTION_DS_INVENTORY = 'c55bd93b-3920-410e-b21a-88b828408130';
+
+// ── Staff accounts (簡易認証) ──
+const STAFF = {
+  'margary': { password: 'margary2026', name: 'Margary Staff' },
+  'staff01': { password: 'staff2026',   name: 'スタッフ 01' },
+  'staff02': { password: 'staff2026',   name: 'スタッフ 02' },
+};
+
+// ── State ──
+let currentUser = null;
+let uploadedImages = []; // {file, base64}
+let extractedData = {};
+let notionApiKey = null;
+let anthropicApiKey = null;
+
+// ── API Keys (localStorage保存) ──
+function loadApiKeys() {
+  anthropicApiKey = localStorage.getItem('margary_anthropic_key') || null;
+  notionApiKey = localStorage.getItem('margary_notion_key') || null;
+  updateApiStatus();
+}
+
+function updateApiStatus() {
+  const aOk = !!anthropicApiKey;
+  const nOk = !!notionApiKey;
+  ['anthropic-status','check-anthropic'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.className = 'api-status ' + (aOk ? 'ok' : 'ng'); }
+  });
+  ['notion-status','check-notion'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.className = 'api-status ' + (nOk ? 'ok' : 'ng'); }
+  });
+}
+
+function showSettings() {
+  const aKey = document.getElementById('s-anthropic-key');
+  const nKey = document.getElementById('s-notion-key');
+  if (aKey) aKey.value = anthropicApiKey || '';
+  if (nKey) nKey.value = notionApiKey || '';
+  updateApiStatus();
+  showScreen('screen-settings');
+}
+
+function hideSettings() {
+  showScreen('screen-app');
+}
+
+function saveSettings() {
+  const aKey = document.getElementById('s-anthropic-key').value.trim();
+  const nKey = document.getElementById('s-notion-key').value.trim();
+  const msg = document.getElementById('settings-msg');
+
+  if (!aKey || !nKey) {
+    msg.className = 'error-msg';
+    msg.textContent = '両方のキーを入力してください';
+    msg.style.display = 'block';
+    return;
+  }
+
+  anthropicApiKey = aKey;
+  notionApiKey = nKey;
+  localStorage.setItem('margary_anthropic_key', aKey);
+  localStorage.setItem('margary_notion_key', nKey);
+
+  msg.className = 'success-msg';
+  msg.textContent = '✅ 保存しました！';
+  msg.style.display = 'block';
+  updateApiStatus();
+
+  setTimeout(() => { hideSettings(); }, 1200);
+}
+
+function checkApiKeys() {
+  if (!anthropicApiKey || !notionApiKey) {
+    showSettings();
+    return false;
+  }
+  return true;
+}
+
+// ── Login ──
+function doLogin() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  const staff = STAFF[u];
+  if (staff && staff.password === p) {
+    currentUser = { id: u, name: staff.name };
+    document.getElementById('header-username').textContent = staff.name;
+    showScreen('screen-app');
+    loadApiKeys();
+    if (!anthropicApiKey || !notionApiKey) {
+      setTimeout(() => showSettings(), 500);
+    }
+  } else {
+    const err = document.getElementById('login-error');
+    err.textContent = 'ユーザー名またはパスワードが違います';
+    err.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  resetApp();
+  showScreen('screen-login');
+}
+
+// ── Screen control ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── File handling ──
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      uploadedImages.push({ file, base64: e.target.result });
+      renderPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPreviews() {
+  const grid = document.getElementById('preview-grid');
+  grid.style.display = uploadedImages.length ? 'grid' : 'none';
+  grid.innerHTML = uploadedImages.map((img, i) => `
+    <div class="preview-item">
+      <img src="${img.base64}">
+      <button class="remove-img" onclick="removeImage(${i})">×</button>
+    </div>
+  `).join('');
+  document.getElementById('analyze-section').style.display = uploadedImages.length ? 'block' : 'none';
+}
+
+function removeImage(idx) {
+  uploadedImages.splice(idx, 1);
+  renderPreviews();
+}
+
+// ── AI Analysis ──
+async function analyzeImages() {
+  if (!uploadedImages.length) return;
+  if (!checkApiKeys()) return;
+
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('loading-wrap').style.display = 'block';
+  document.getElementById('edit-form').style.display = 'none';
+
+  // Build image content
+  const imageContent = uploadedImages.map(img => ({
+    type: 'image',
+    source: {
+      type: 'base64',
+      media_type: img.file.type || 'image/jpeg',
+      data: img.base64.split(',')[1]
+    }
+  }));
+
+  const prompt = `これらはラグジュアリーブランド商品のラベル・商品写真です。
+ラベルから以下の情報を抽出してJSONで返してください。
+見つからない場合は空文字にしてください。
+
+{
+  "brand": "ブランド名（LOEWE/PRADA/MIU MIU/GUCCI/CELINE/BOTTEGA VENETA/SAINT LAURENT/BURBERRY/FENDI/VALENTINO/その他）",
+  "sku": "品番",
+  "model": "モデル名（品番のアンダースコア以降）",
+  "color": "カラー名",
+  "price_eur": "価格（数字のみ）",
+  "date": "日付（YYYY-MM-DD形式）",
+  "account": "買付アカウント（MはMargary）",
+  "category": "カテゴリ推定（バッグ/財布・小物/シューズ/アクセサリー/アパレル）"
+}
+
+JSONのみ返してください。`;
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        images: uploadedImages.map(img => ({
+          mediaType: img.file.type || 'image/jpeg',
+          data: img.base64.split(',')[1]
+        }))
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error('API Error ' + response.status + ': ' + (data.error || JSON.stringify(data)));
+    extractedData = data.result || {};
+    fillForm(extractedData);
+  } catch (e) {
+    extractedData = {};
+    fillForm({});
+    alert('AI読み取りエラー: ' + e.message);
+  }
+
+  document.getElementById('loading-wrap').style.display = 'none';
+  document.getElementById('edit-form').style.display = 'block';
+}
+
+// ── Fill form ──
+function fillForm(d) {
+  if (d.brand) setSelect('f-brand', d.brand);
+  if (d.sku) document.getElementById('f-sku').value = d.sku;
+  if (d.model) document.getElementById('f-model').value = d.model;
+  if (d.color) document.getElementById('f-color').value = d.color;
+  if (d.category) setSelect('f-category', d.category);
+  if (d.price_eur) {
+    document.getElementById('f-price').value = d.price_eur;
+    updatePricePreview();
+  }
+  if (d.date) document.getElementById('f-date').value = d.date;
+
+  // Price live update
+  document.getElementById('f-price').addEventListener('input', updatePricePreview);
+}
+
+function setSelect(id, val) {
+  const sel = document.getElementById(id);
+  for (let o of sel.options) {
+    if (o.value === val || o.text === val) { sel.value = o.value; break; }
+  }
+}
+
+function updatePricePreview() {
+  const price = parseFloat(document.getElementById('f-price').value) || 0;
+  const jpy = Math.round(price * 190);
+  const el = document.getElementById('ref-price-display');
+  const wrap = document.getElementById('price-preview');
+  if (price > 0) {
+    el.textContent = '¥' + jpy.toLocaleString();
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+// ── Step 3 ──
+function goToStep3() {
+  const sku = document.getElementById('f-sku').value.trim();
+  const color = document.getElementById('f-color').value.trim();
+  const price = parseFloat(document.getElementById('f-price').value) || 0;
+  const jpy = Math.round(price * 190);
+
+  const productName = `${sku}_${color.replace(/ /g,'-')}_€${price}`;
+
+  document.getElementById('confirm-summary').innerHTML = `
+    <b>商品名：</b> ${productName}<br>
+    <b>ブランド：</b> ${document.getElementById('f-brand').value}<br>
+    <b>品番：</b> ${sku}<br>
+    <b>モデル：</b> ${document.getElementById('f-model').value}<br>
+    <b>カラー：</b> ${color}<br>
+    <b>カテゴリ：</b> ${document.getElementById('f-category').value}<br>
+    <b>価格：</b> €${price} → <b style="color:var(--gold)">¥${jpy.toLocaleString()}</b><br>
+    <b>仕入れ日：</b> ${document.getElementById('f-date').value}<br>
+    <b>店舗：</b> ${document.getElementById('f-store').value}<br>
+    <b>在庫数：</b> ${document.getElementById('f-stock').value}<br>
+    <b>サイズ：</b> ${document.getElementById('f-size').value}<br>
+    <b>登録者：</b> ${currentUser.name}
+  `;
+
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+}
+
+function goBackToStep2() {
+  document.getElementById('step3').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+}
+
+// ── Notion Register ──
+async function registerToNotion() {
+  if (!checkApiKeys()) return;
+
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true;
+  btn.textContent = '登録中...';
+
+  const sku = document.getElementById('f-sku').value.trim();
+  const color = document.getElementById('f-color').value.trim();
+  const price = parseFloat(document.getElementById('f-price').value) || 0;
+  const productName = `${sku}_${color.replace(/ /g,'-')}_€${price}`;
+  const memo = `買付アカウント: ${document.getElementById('f-account').value === 'M' ? 'Margary（M）' : 'その他'} / ${color} / 登録者: ${currentUser.name}${document.getElementById('f-memo').value ? ' / ' + document.getElementById('f-memo').value : ''}`;
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'register',
+        notionToken: notionApiKey,
+        product: {
+          name: productName,
+          sku: sku,
+          brand: document.getElementById('f-brand').value,
+          category: document.getElementById('f-category').value,
+          store: document.getElementById('f-store').value,
+          price: price,
+          date: document.getElementById('f-date').value || new Date().toISOString().split('T')[0],
+          memo: memo
+        },
+        inventory: {
+          name: `${sku}_${color.replace(/ /g,'-')}_${document.getElementById('f-size').value}`,
+          color: color,
+          size: document.getElementById('f-size').value,
+          stock: parseInt(document.getElementById('f-stock').value) || 0
+        }
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || '登録失敗');
+
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('step4').style.display = 'block';
+    document.getElementById('done-message').textContent = productName + ' を登録しました';
+    document.getElementById('done-detail').innerHTML = `
+      参考価格: <b style="color:var(--gold)">¥${Math.round(price * 190).toLocaleString()}</b><br>
+      Notionページ: <a href="${data.productUrl}" target="_blank" style="color:var(--gold)">開く →</a>
+    `;
+
+  } catch (e) {
+    const errEl = document.getElementById('register-error');
+    errEl.textContent = '登録に失敗しました: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '✅ Notionに登録する';
+  }
+}
+
+// ── Reset ──
+function resetApp() {
+  uploadedImages = [];
+  extractedData = {};
+  document.getElementById('preview-grid').innerHTML = '';
+  document.getElementById('preview-grid').style.display = 'none';
+  document.getElementById('analyze-section').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('register-error').style.display = 'none';
+  document.getElementById('register-success').style.display = 'none';
+  document.getElementById('register-btn').disabled = false;
+  document.getElementById('register-btn').textContent = '✅ Notionに登録する';
+
+  document.getElementById('step1').style.display = 'block';
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'none';
+  document.getElementById('step4').style.display = 'none';
+}
+
+// Enter key on login
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('screen-login').classList.contains('active')) {
+    doLogin();
+  }
+});
+</script>
+</body>
+</html>
