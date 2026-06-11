@@ -347,6 +347,27 @@ body {
 }
 .suggestion-new:hover { background: var(--gold-pale); }
 
+/* Final price styling */
+.input-final { border-color: var(--red) !important; color: var(--red); font-weight: 700; }
+.input-final::placeholder { color: #E8B4AE; font-weight: 400; }
+
+.source-toggle { display: flex; gap: 8px; }
+.source-btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.source-btn.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+.source-btn.source-final.active { background: var(--red); border-color: var(--red); }
+
 /* Mode selector */
 .mode-grid {
   display: grid;
@@ -755,13 +776,13 @@ body {
 
   <div class="home-content">
     <div class="stats-row">
-      <div class="stat-card">
+      <div class="stat-card" onclick="setFilter('all')" id="filter-all" style="cursor:pointer">
         <div class="stat-num" id="stat-total">0</div>
         <div class="stat-label">登録商品数</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="setFilter('update')" id="filter-update" style="cursor:pointer">
         <div class="stat-num" id="stat-warn" style="color:var(--red)">0</div>
-        <div class="stat-label">⚠️ 要確認</div>
+        <div class="stat-label">⚠️ 要価格更新</div>
       </div>
     </div>
 
@@ -928,24 +949,37 @@ body {
 
     <!-- Step 3: 価格 -->
     <div class="form-section" id="section-3">
+      <div class="form-group">
+        <div class="form-label">MSFRP（参考価格）EUR</div>
+        <input class="form-input" id="input-msfrp-eur" type="number" step="0.01" placeholder="例：580.00" oninput="updateCalc()">
+      </div>
+
       <div class="input-row">
         <div class="form-group">
-          <div class="form-label">買付価格EUR<span class="required">*</span></div>
-          <input class="form-input" id="input-buy-eur" type="number" step="0.01" placeholder="0.00" oninput="updateCalc()">
+          <div class="form-label">Outlet価格 EUR<span class="required">*</span></div>
+          <input class="form-input" id="input-outlet-eur" type="number" step="0.01" placeholder="例：290.00" oninput="updateCalc()">
         </div>
         <div class="form-group">
-          <div class="form-label">販売価格JPY</div>
-          <input class="form-input" id="input-sell-jpy" type="number" placeholder="0" oninput="updateCalc()">
+          <div class="form-label" style="color:var(--red)">Final Price EUR<span class="optional">あれば</span></div>
+          <input class="form-input input-final" id="input-final-eur" type="number" step="0.01" placeholder="例：232.00" oninput="updateCalc()">
+        </div>
+      </div>
+
+      <div class="form-group" id="price-source-group" style="display:none">
+        <div class="form-label">販売価格JPYの算出元</div>
+        <div class="source-toggle">
+          <button class="source-btn active" id="src-outlet" onclick="setPriceSource('Outlet')">Outlet価格</button>
+          <button class="source-btn source-final" id="src-final" onclick="setPriceSource('Final')">Final Price</button>
         </div>
       </div>
 
       <div class="input-row">
         <div class="form-group">
-          <div class="form-label">参考価格EUR</div>
-          <input class="form-input" id="input-ref-eur" type="number" step="0.01" placeholder="0.00" oninput="updateCalc()">
+          <div class="form-label">販売価格JPY</div>
+          <input class="form-input" id="input-sell-jpy" type="number" placeholder="0" oninput="updateCalc()">
         </div>
         <div class="form-group">
-          <div class="form-label">参考価格JPY<span class="optional">自動計算</span></div>
+          <div class="form-label">参考価格JPY<span class="optional">MSFRP×190</span></div>
           <input class="form-input" id="input-ref-jpy" type="number" placeholder="自動計算" readonly style="background:var(--cream-dark);color:var(--muted)">
         </div>
       </div>
@@ -1175,9 +1209,13 @@ function resetForm() {
   document.getElementById('ai-result').classList.remove('visible');
   document.getElementById('btn-ai-read').disabled = true;
   document.getElementById('label-add-row').style.display = 'none';
-  ['input-type1','input-type2','input-type3','input-model','input-buy-eur',
-   'input-sell-jpy','input-ref-eur','input-ref-jpy','input-buyma-url','input-memo']
+  ['input-type1','input-type2','input-type3','input-model','input-msfrp-eur','input-outlet-eur','input-final-eur',
+   'input-sell-jpy','input-ref-jpy','input-buyma-url','input-memo']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  priceSource = 'Outlet';
+  document.getElementById('src-outlet').classList.add('active');
+  document.getElementById('src-final').classList.remove('active');
+  document.getElementById('price-source-group').style.display = 'none';
   document.getElementById('input-category').value = '';
   document.getElementById('input-box-size').value = '';
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
@@ -1267,9 +1305,23 @@ async function aiReadLabel() {
     }));
     imageContents.push({
       type: 'text',
-      text: `このラベル画像から以下の情報を読み取ってJSONで返してください。
-フィールド：type1（型式1、英数字コード）、type2（型式2）、type3（型式3）、price_eur（価格、数値のみ）、model（モデル名、例GALLERIA等、わからなければ空）。
-必ずJSONのみ返してください。例：{"type1":"2UH011","type2":"2DYK_F0002","type3":"F0002_NERO","price_eur":850,"model":""}`
+      text: `これはPRADAまたはMIU MIUの商品タグです。以下のルールで情報を読み取り、JSONのみで返してください。
+
+【タグの構造】
+- ART. 欄 → 型式1（例：2CC537）
+- タグ下部に「型式1 コード2 コード3 数字 数字」形式の行があります（例：2CC537 2CYS F0002 005 01）
+- 型式2 = 下部行の2番目のコード + "_" + GROUP NAME欄の値（例：2CYS_SOFT GRAIN）
+- 型式3 = 下部行の3番目のコード + "_" + COLOUR欄の値（例：F0002_NERO）
+- モデル = 商品説明行（例：CINTURE IN PELLE。末尾のサイズ数字は除く）
+- サイズ = SIZE欄（例：80）
+- MSFRP = MSFRP欄の金額（EUR）
+- Outlet price = Outlet price欄の金額（EUR）
+- Final Price = Final Price欄の金額（EUR、ない場合はnull）
+
+【返却JSON形式】
+{"type1":"2CC537","type2":"2CYS_SOFT GRAIN","type3":"F0002_NERO","model":"CINTURE IN PELLE","size":"80","msfrp":580,"outlet":290,"final":232}
+
+Final Priceがタグにない場合は"final":nullとしてください。複数タグ画像がある場合は、最も情報が多い・価格が新しいものを優先してください。JSONのみ返してください。`
     });
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1289,8 +1341,16 @@ async function aiReadLabel() {
     if (aiExtracted.type1) document.getElementById('input-type1').value = aiExtracted.type1;
     if (aiExtracted.type2) document.getElementById('input-type2').value = aiExtracted.type2;
     if (aiExtracted.type3) document.getElementById('input-type3').value = aiExtracted.type3;
-    if (aiExtracted.price_eur) document.getElementById('input-buy-eur').value = aiExtracted.price_eur;
     if (aiExtracted.model) document.getElementById('input-model').value = aiExtracted.model;
+    if (aiExtracted.msfrp) document.getElementById('input-msfrp-eur').value = aiExtracted.msfrp;
+    if (aiExtracted.outlet) document.getElementById('input-outlet-eur').value = aiExtracted.outlet;
+    if (aiExtracted.final) document.getElementById('input-final-eur').value = aiExtracted.final;
+    if (aiExtracted.size) {
+      document.querySelectorAll('.size-btn').forEach(b => {
+        if (b.textContent === String(aiExtracted.size)) b.classList.add('selected');
+      });
+    }
+    updateCalc();
     document.getElementById('ai-result').classList.add('visible');
     hideLoading();
     showToast('読み取り完了！内容を確認してください', 'success');
@@ -1361,15 +1421,44 @@ function getSelectedSizes() {
 }
 
 // ===== CALC =====
+let priceSource = 'Outlet';
+
+function setPriceSource(src) {
+  priceSource = src;
+  document.getElementById('src-outlet').classList.toggle('active', src === 'Outlet');
+  document.getElementById('src-final').classList.toggle('active', src === 'Final');
+  updateCalc();
+}
+
+function getBasePrice() {
+  const outlet = parseFloat(document.getElementById('input-outlet-eur').value) || 0;
+  const final = parseFloat(document.getElementById('input-final-eur').value) || 0;
+  return priceSource === 'Final' && final ? final : outlet;
+}
+
 function updateCalc() {
-  const buyEur = parseFloat(document.getElementById('input-buy-eur').value) || 0;
+  const msfrp = parseFloat(document.getElementById('input-msfrp-eur').value) || 0;
+  const final = parseFloat(document.getElementById('input-final-eur').value) || 0;
   const sellJpy = parseFloat(document.getElementById('input-sell-jpy').value) || 0;
-  const refEur = parseFloat(document.getElementById('input-ref-eur').value) || 0;
-  if (refEur) document.getElementById('input-ref-jpy').value = Math.round(refEur * 190);
-  const profit = sellJpy - (buyEur * 190);
+
+  // Show/hide price source toggle when Final exists
+  const srcGroup = document.getElementById('price-source-group');
+  if (final > 0) {
+    srcGroup.style.display = 'block';
+  } else {
+    srcGroup.style.display = 'none';
+    priceSource = 'Outlet';
+    document.getElementById('src-outlet').classList.add('active');
+    document.getElementById('src-final').classList.remove('active');
+  }
+
+  if (msfrp) document.getElementById('input-ref-jpy').value = Math.round(msfrp * 190);
+
+  const base = getBasePrice();
+  const profit = sellJpy - (base * 190);
   const el = document.getElementById('calc-profit');
-  if (sellJpy && buyEur) {
-    el.textContent = (profit >= 0 ? '+' : '') + profit.toLocaleString() + ' 円';
+  if (sellJpy && base) {
+    el.textContent = (profit >= 0 ? '+' : '') + profit.toLocaleString() + ' 円（' + priceSource + '基準）';
     el.style.color = profit >= 0 ? 'var(--green)' : 'var(--red)';
   } else {
     el.textContent = '— 円';
@@ -1382,9 +1471,9 @@ function updateProductNamePreview() {
   const t1 = document.getElementById('input-type1').value.trim();
   const t2 = document.getElementById('input-type2').value.trim();
   const t3 = document.getElementById('input-type3').value.trim();
-  const eur = document.getElementById('input-buy-eur').value;
+  const base = getBasePrice();
   const parts = [t1, t2, t3].filter(Boolean);
-  if (eur) parts.push('€' + parseFloat(eur).toFixed(2));
+  if (base) parts.push('€' + base.toFixed(2));
   const name = parts.join('_');
   document.getElementById('product-name-preview').textContent = name || '型式と価格を入力すると自動生成されます';
 }
@@ -1402,6 +1491,20 @@ function generateBuymaUrl() {
 }
 
 // ===== SUBMIT =====
+async function findExistingProduct(dbId, notionToken, t1, t2, t3) {
+  const filters = [{ property: '型式1', rich_text: { equals: t1 } }];
+  if (t2) filters.push({ property: '型式2', rich_text: { equals: t2 } });
+  if (t3) filters.push({ property: '型式3', rich_text: { equals: t3 } });
+  const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filter: { and: filters }, page_size: 1 })
+  });
+  const data = await res.json();
+  if (!res.ok) return null;
+  return data.results?.[0] || null;
+}
+
 async function submitProduct() {
   const notionToken = getSetting('notion');
   if (!notionToken) { showToast('Notionトークンを設定してください', 'error'); showScreen('settings'); return; }
@@ -1409,61 +1512,113 @@ async function submitProduct() {
   const t1 = document.getElementById('input-type1').value.trim();
   if (!t1) { showToast('型式1は必須です', 'error'); goToStep(2); return; }
 
-  const buyEur = parseFloat(document.getElementById('input-buy-eur').value) || 0;
+  const msfrp = parseFloat(document.getElementById('input-msfrp-eur').value) || 0;
+  const outlet = parseFloat(document.getElementById('input-outlet-eur').value) || 0;
+  const finalP = parseFloat(document.getElementById('input-final-eur').value) || 0;
   const sellJpy = parseFloat(document.getElementById('input-sell-jpy').value) || 0;
-  const refEur = parseFloat(document.getElementById('input-ref-eur').value) || 0;
   const t2 = document.getElementById('input-type2').value.trim();
   const t3 = document.getElementById('input-type3').value.trim();
   const model = document.getElementById('input-model').value.trim();
   const memo = document.getElementById('input-memo').value.trim();
   const buymaUrl = document.getElementById('input-buyma-url').value.trim();
-  const boxSize = document.getElementById('input-box-size').value;
   const sizes = getSelectedSizes();
+  const base = getBasePrice();
 
   const parts = [t1, t2, t3].filter(Boolean);
-  if (buyEur) parts.push('€' + buyEur.toFixed(2));
+  if (base) parts.push('€' + base.toFixed(2));
   const productName = parts.join('_');
-
   const buymaCompetitorUrl = document.getElementById('buyma-url-preview').textContent;
 
-  showLoading('Notionに登録中...');
+  showLoading('既存登録を確認中...');
+
+  // ===== 重複チェック =====
+  let existing = null;
+  try {
+    existing = await findExistingProduct(dbId, notionToken, t1, t2, t3);
+  } catch(e) {}
+
+  let priceChanged = false;
+  if (existing && !editingProductId) {
+    hideLoading();
+    const exProps = existing.properties;
+    const exOutlet = exProps['Outlet価格（EUR）']?.number || 0;
+    const exFinal = exProps['Final価格（EUR）']?.number || 0;
+    const exMsfrp = exProps['MSFRP（EUR）']?.number || 0;
+
+    // 価格変更検出
+    const changes = [];
+    if (msfrp && exMsfrp !== msfrp) changes.push(`MSFRP: €${exMsfrp} → €${msfrp}`);
+    if (outlet && exOutlet !== outlet) changes.push(`Outlet: €${exOutlet} → €${outlet}`);
+    if (finalP && exFinal !== finalP) changes.push(exFinal ? `Final: €${exFinal} → €${finalP}` : `Final Price 追加: €${finalP}`);
+    priceChanged = changes.length > 0;
+
+    const msg = '⚠️ 既に登録済みの商品です。\n\n' +
+      (exProps['商品名']?.title?.[0]?.plain_text || '') +
+      (changes.length ? '\n\n【価格変更】\n' + changes.join('\n') : '\n\n価格変更はありません') +
+      '\n\n上書きしてもいいですか？';
+    if (!confirm(msg)) {
+      showToast('登録をキャンセルしました');
+      return;
+    }
+    editingProductId = existing.id;
+    showLoading('上書き登録中...');
+  } else {
+    showLoading('Notionに登録中...');
+  }
+
   try {
     const properties = {
       '商品名': { 'title': [{ 'text': { 'content': productName } }] },
       '型式1': { 'rich_text': [{ 'text': { 'content': t1 } }] },
+      '型式2': { 'rich_text': t2 ? [{ 'text': { 'content': t2 } }] : [] },
+      '型式3': { 'rich_text': t3 ? [{ 'text': { 'content': t3 } }] : [] },
+      'モデル': { 'rich_text': model ? [{ 'text': { 'content': model } }] : [] },
     };
-    if (t2) properties['型式2'] = { 'rich_text': [{ 'text': { 'content': t2 } }] };
-    if (t3) properties['型式3'] = { 'rich_text': [{ 'text': { 'content': t3 } }] };
-    if (model) properties['モデル'] = { 'rich_text': [{ 'text': { 'content': model } }] };
-    if (buyEur) properties['買付価格EUR'] = { 'number': buyEur };
+    if (msfrp) properties['MSFRP（EUR）'] = { 'number': msfrp };
+    if (outlet) properties['Outlet価格（EUR）'] = { 'number': outlet };
+    properties['Final価格（EUR）'] = { 'number': finalP || null };
+    properties['価格算出元'] = { 'select': { 'name': priceSource } };
     if (sellJpy) properties['販売価格JPY'] = { 'number': sellJpy };
-    if (refEur) properties['参考価格EUR'] = { 'number': refEur };
     if (memo) properties['MEMO'] = { 'rich_text': [{ 'text': { 'content': memo } }] };
     if (buymaUrl) properties['BUYMA出品URL'] = { 'url': buymaUrl };
-    if (buymaCompetitorUrl && buymaCompetitorUrl !== '-') properties['BUYMA競合URL'] = { 'url': buymaCompetitorUrl };
+    if (buymaCompetitorUrl && buymaCompetitorUrl !== '-' && buymaCompetitorUrl.startsWith('http')) properties['BUYMA競合URL'] = { 'url': buymaCompetitorUrl };
     if (sizes.length) properties['サイズ展開'] = { 'multi_select': sizes.map(s => ({ 'name': s })) };
+    // 価格変更があった場合は要価格更新フラグON
+    if (priceChanged) properties['要価格更新'] = { 'checkbox': true };
 
-    const res = await fetch('https://api.notion.com/v1/pages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + notionToken,
-        'Notion-Version': '2022-06-28'
-      },
-      body: JSON.stringify({ parent: { database_id: dbId }, properties })
-    });
+    let res;
+    if (editingProductId) {
+      // 上書き（更新）
+      res = await fetch(`https://api.notion.com/v1/pages/${editingProductId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28' },
+        body: JSON.stringify({ properties })
+      });
+    } else {
+      // 新規作成
+      res = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28' },
+        body: JSON.stringify({ parent: { database_id: dbId }, properties })
+      });
+    }
     const result = await res.json();
     if (!res.ok) throw new Error(result.message || 'Notionエラー');
 
     // Add to type master
-    const typeKey = currentBrand === 'PRADA' ? 'prada-type-db' : 'miumiu-type-db';
     if (t1) addToMasterSilent('type1', t1);
     if (t2) addToMasterSilent('type2', t2);
     if (t3) addToMasterSilent('type3', t3);
 
     hideLoading();
-    showToast('✅ Notionに登録しました！', 'success');
-    setTimeout(() => showScreen('home'), 1200);
+    if (priceChanged) {
+      showToast('✅ 上書き登録完了（⚠️ 要価格更新フラグON）', 'success');
+    } else if (editingProductId) {
+      showToast('✅ 上書き登録しました', 'success');
+    } else {
+      showToast('✅ Notionに登録しました！', 'success');
+    }
+    setTimeout(() => showScreen('home'), 1500);
   } catch(e) {
     hideLoading();
     showToast('登録エラー: ' + e.message, 'error');
@@ -1503,40 +1658,47 @@ async function loadProductList() {
   }
 }
 
+let currentFilter = 'all';
+function setFilter(f) {
+  currentFilter = f;
+  document.getElementById('filter-all').style.outline = f === 'all' ? '2px solid var(--gold)' : 'none';
+  document.getElementById('filter-update').style.outline = f === 'update' ? '2px solid var(--red)' : 'none';
+  document.getElementById('list-title').textContent = currentBrand + (f === 'update' ? ' — ⚠️ 要価格更新' : ' — 登録済み商品');
+  renderProductList();
+}
+
 function renderProductList() {
   const list = document.getElementById('product-list');
-  const items = products[currentBrand] || [];
+  let items = products[currentBrand] || [];
   document.getElementById('stat-total').textContent = items.length;
-  const warns = items.filter(p => {
-    const sell = p.properties?.['販売価格JPY']?.number || 0;
-    const c1 = p.properties?.['競合1価格JPY']?.number || 0;
-    return sell > 0 && c1 > 0 && sell > c1;
-  }).length;
-  document.getElementById('stat-warn').textContent = warns;
+  const updateItems = items.filter(p => p.properties?.['要価格更新']?.checkbox === true);
+  document.getElementById('stat-warn').textContent = updateItems.length;
+
+  if (currentFilter === 'update') items = updateItems;
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">まだ商品が登録されていません</div></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">${currentFilter==='update'?'✅':'📦'}</div><div class="empty-text">${currentFilter==='update'?'価格更新が必要な商品はありません':'まだ商品が登録されていません'}</div></div>`;
     return;
   }
   list.innerHTML = items.map(p => {
     const name = p.properties?.['商品名']?.title?.[0]?.plain_text || '—';
     const t1 = p.properties?.['型式1']?.rich_text?.[0]?.plain_text || '';
     const model = p.properties?.['モデル']?.rich_text?.[0]?.plain_text || '';
-    const buyEur = p.properties?.['買付価格EUR']?.number;
+    const outlet = p.properties?.['Outlet価格（EUR）']?.number;
+    const finalP = p.properties?.['Final価格（EUR）']?.number;
     const sellJpy = p.properties?.['販売価格JPY']?.number;
-    const c1 = p.properties?.['競合1価格JPY']?.number;
+    const needsUpdate = p.properties?.['要価格更新']?.checkbox === true;
     let badge = '';
-    if (sellJpy && c1) {
-      badge = sellJpy <= c1
-        ? '<span class="product-badge badge-ok">✅ 最安値</span>'
-        : '<span class="product-badge badge-warn">⚠️ 要確認</span>';
-    }
+    if (needsUpdate) badge = '<span class="product-badge badge-warn">⚠️ 要価格更新</span>';
+    let priceHtml = outlet ? '€' + outlet : '—';
+    if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
+    if (sellJpy) priceHtml += ' / ¥' + sellJpy.toLocaleString();
     return `<div class="product-card" onclick="openDetail('${p.id}')">
       <div class="product-thumb">📦</div>
       <div class="product-info">
         <div class="product-name">${name}</div>
         <div class="product-meta">${[t1, model].filter(Boolean).join(' · ')}</div>
-        <div class="product-price">${buyEur ? '€' + buyEur : '—'} ${sellJpy ? '/ ¥' + sellJpy.toLocaleString() : ''}</div>
+        <div class="product-price">${priceHtml}</div>
         ${badge}
       </div>
     </div>`;
@@ -1560,7 +1722,15 @@ function openDetail(id) {
     return '—';
   };
   document.getElementById('detail-brand-label').textContent = currentBrand;
+  const needsUpdate = props['要価格更新']?.checkbox === true;
+  const finalVal = props['Final価格（EUR）']?.number;
+  const priceSrc = props['価格算出元']?.select?.name || 'Outlet';
   document.getElementById('detail-body').innerHTML = `
+    ${needsUpdate ? `
+    <div style="background:var(--red-pale);border:1.5px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+      <div style="font-weight:700;color:var(--red);font-size:14px;margin-bottom:8px;">⚠️ 価格変更あり — BUYMA出品価格の更新が必要です</div>
+      <button onclick="clearUpdateFlag('${p.id}')" style="width:100%;background:var(--red);color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">✅ 価格更新済みにする（フラグ解除）</button>
+    </div>` : ''}
     <div class="detail-images">
       <div class="detail-img-main">📦</div>
       <div class="detail-img-sub">
@@ -1574,14 +1744,15 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">型式2</span><span class="detail-val">${get('型式2')}</span></div>
       <div class="detail-row"><span class="detail-key">型式3</span><span class="detail-val">${get('型式3')}</span></div>
       <div class="detail-row"><span class="detail-key">モデル</span><span class="detail-val">${get('モデル')}</span></div>
-      <div class="detail-row"><span class="detail-key">カテゴリ</span><span class="detail-val">${get('カテゴリ') !== '—' ? 'あり' : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">サイズ展開</span><span class="detail-val">${get('サイズ展開','ms')}</span></div>
     </div>
     <div class="detail-card">
-      <div class="detail-card-title">価格情報</div>
-      <div class="detail-row"><span class="detail-key">買付価格</span><span class="detail-val gold">€${get('買付価格EUR','number')}</span></div>
-      <div class="detail-row"><span class="detail-key">販売価格</span><span class="detail-val">¥${typeof get('販売価格JPY','number') === 'number' ? get('販売価格JPY','number').toLocaleString() : '—'}</span></div>
-      <div class="detail-row"><span class="detail-key">参考価格EUR</span><span class="detail-val">€${get('参考価格EUR','number')}</span></div>
+      <div class="detail-card-title">価格情報${finalVal ? ' <span style="color:var(--red)">｜Final Priceあり</span>' : ''}</div>
+      <div class="detail-row"><span class="detail-key">MSFRP（参考価格）</span><span class="detail-val">€${get('MSFRP（EUR）','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">Outlet価格</span><span class="detail-val gold">€${get('Outlet価格（EUR）','number')}</span></div>
+      ${finalVal ? `<div class="detail-row"><span class="detail-key" style="color:var(--red);font-weight:700">Final Price</span><span class="detail-val red" style="font-size:16px">€${finalVal}</span></div>` : ''}
+      <div class="detail-row"><span class="detail-key">価格算出元</span><span class="detail-val ${priceSrc==='Final'?'red':''}" >${priceSrc}</span></div>
+      <div class="detail-row"><span class="detail-key">販売価格JPY</span><span class="detail-val">¥${typeof get('販売価格JPY','number') === 'number' ? get('販売価格JPY','number').toLocaleString() : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">参考価格JPY</span><span class="detail-val">${get('参考価格JPY','formula')}</span></div>
       <div class="detail-row"><span class="detail-key">利益（概算）</span><span class="detail-val green">${get('利益','formula')}</span></div>
     </div>
@@ -1595,33 +1766,58 @@ function openDetail(id) {
     </div>
     <div class="detail-card">
       <div class="detail-card-title">その他</div>
-      <div class="detail-row"><span class="detail-key">箱サイズ</span><span class="detail-val">${get('箱サイズ') !== '—' ? 'あり' : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">MEMO</span><span class="detail-val">${get('MEMO')}</span></div>
       <div class="detail-row"><span class="detail-key">BUYMA出品URL</span><span class="detail-val">${get('BUYMA出品URL','url') !== '—' ? '<a href="'+get('BUYMA出品URL','url')+'" target="_blank" style="color:var(--blue)">開く</a>' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">BUYMA競合URL</span><span class="detail-val">${get('BUYMA競合URL','url') !== '—' ? '<a href="'+get('BUYMA競合URL','url')+'" target="_blank" style="color:var(--blue)">開く</a>' : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">登録日</span><span class="detail-val">${p.created_time ? new Date(p.created_time).toLocaleDateString('ja-JP') : '—'}</span></div>
     </div>
   `;
   showScreen('detail');
 }
 
+async function clearUpdateFlag(pageId) {
+  const notionToken = getSetting('notion');
+  showLoading('フラグを解除中...');
+  try {
+    const res = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28' },
+      body: JSON.stringify({ properties: { '要価格更新': { 'checkbox': false } } })
+    });
+    if (!res.ok) throw new Error('更新失敗');
+    hideLoading();
+    showToast('✅ 価格更新済みにしました', 'success');
+    await loadProductList();
+    setTimeout(() => showScreen('home'), 800);
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: ' + e.message, 'error');
+  }
+}
+
 function startEdit() {
   const items = products[currentBrand] || [];
   const p = items.find(x => x.id === editingProductId);
   if (!p) return;
+  const pid = editingProductId;
   const props = p.properties;
   const getT = (key) => props[key]?.rich_text?.[0]?.plain_text || '';
   const getN = (key) => props[key]?.number || '';
   resetForm();
+  editingProductId = pid;
   document.getElementById('register-title').textContent = '編集 — ' + currentBrand;
   document.getElementById('input-type1').value = getT('型式1');
   document.getElementById('input-type2').value = getT('型式2');
   document.getElementById('input-type3').value = getT('型式3');
   document.getElementById('input-model').value = getT('モデル');
-  document.getElementById('input-buy-eur').value = getN('買付価格EUR');
+  document.getElementById('input-msfrp-eur').value = getN('MSFRP（EUR）');
+  document.getElementById('input-outlet-eur').value = getN('Outlet価格（EUR）');
+  document.getElementById('input-final-eur').value = getN('Final価格（EUR）');
   document.getElementById('input-sell-jpy').value = getN('販売価格JPY');
-  document.getElementById('input-ref-eur').value = getN('参考価格EUR');
   document.getElementById('input-buyma-url').value = props['BUYMA出品URL']?.url || '';
   document.getElementById('input-memo').value = getT('MEMO');
+  const src = props['価格算出元']?.select?.name;
+  if (src === 'Final') setPriceSource('Final');
   const sizes = props['サイズ展開']?.multi_select?.map(s => s.name) || [];
   document.querySelectorAll('.size-btn').forEach(b => {
     if (sizes.includes(b.textContent)) b.classList.add('selected');
