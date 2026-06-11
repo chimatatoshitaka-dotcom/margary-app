@@ -2,978 +2,1653 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Margary — 商品登録</title>
 <style>
-  :root {
-    --cream: #F7F5F0;
-    --charcoal: #1C1C1C;
-    --gold: #B8963E;
-    --gold-light: #D4AF6A;
-    --red: #C0392B;
-    --green: #27AE60;
-    --border: #E0DDD8;
-    --muted: #8A8680;
-    --white: #FFFFFF;
-    --shadow: 0 2px 12px rgba(0,0,0,0.08);
-  }
+:root {
+  --cream: #F7F5F0;
+  --cream-dark: #EDEAE3;
+  --charcoal: #1C1C1C;
+  --charcoal-light: #3A3A3A;
+  --gold: #B8963E;
+  --gold-light: #D4AF6A;
+  --gold-pale: #F0E8D0;
+  --muted: #8A8680;
+  --border: #DDD9D2;
+  --white: #FFFFFF;
+  --green: #2D7D52;
+  --green-pale: #E8F5EE;
+  --red: #C0392B;
+  --red-pale: #FDECEA;
+  --blue: #2563EB;
+  --blue-pale: #EFF6FF;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-  body {
-    font-family: 'Helvetica Neue', Arial, 'Hiragino Sans', sans-serif;
-    background: var(--cream);
-    color: var(--charcoal);
-    min-height: 100vh;
-  }
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  background: var(--cream);
+  color: var(--charcoal);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.5;
+}
 
-  /* ── Header ── */
-  .header {
-    background: var(--charcoal);
-    color: var(--white);
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .header-logo {
-    font-size: 18px;
-    font-weight: 300;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--gold-light);
-  }
-  .header-user {
-    font-size: 12px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .logout-btn {
-    background: none;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .settings-btn {
-    background: none;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: pointer;
-    margin-right: 6px;
-  }
-  .api-status {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 4px;
-  }
-  .api-status.ok { background: var(--green); }
-  .api-status.ng { background: var(--red); }
+/* ===== HEADER ===== */
+.header {
+  background: var(--charcoal);
+  color: var(--white);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+.header-logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--gold-light);
+}
+.header-logo span { color: var(--white); font-weight: 300; }
+.header-actions { display: flex; gap: 8px; }
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.btn-icon:hover { color: var(--gold-light); }
 
-  /* ── Screen ── */
-  .screen { display: none; }
-  .screen.active { display: block; }
+/* ===== SCREENS ===== */
+.screen { display: none; min-height: calc(100vh - 52px); }
+.screen.active { display: block; }
 
-  /* ── Login ── */
-  .login-wrap {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 24px;
-    background: var(--charcoal);
-  }
-  .login-logo {
-    font-size: 28px;
-    font-weight: 200;
-    letter-spacing: 6px;
-    color: var(--gold-light);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
-  .login-sub {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--muted);
-    margin-bottom: 40px;
-    text-transform: uppercase;
-  }
-  .login-card {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 32px 24px;
-    width: 100%;
-    max-width: 360px;
-  }
-  .login-card h2 {
-    font-size: 16px;
-    font-weight: 500;
-    margin-bottom: 24px;
-    color: var(--charcoal);
-  }
+/* ===== HOME ===== */
+.home-brand-bar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.brand-tab {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+.brand-tab.active {
+  background: var(--charcoal);
+  color: var(--white);
+  border-color: var(--charcoal);
+}
 
-  /* ── Forms ── */
-  .form-group {
-    margin-bottom: 16px;
-  }
-  .form-group label {
-    display: block;
-    font-size: 11px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-    font-weight: 500;
-  }
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 15px;
-    background: var(--white);
-    color: var(--charcoal);
-    -webkit-appearance: none;
-    transition: border-color 0.2s;
-  }
-  .form-group input:focus,
-  .form-group select:focus,
-  .form-group textarea:focus {
-    outline: none;
-    border-color: var(--gold);
-  }
-  .form-group textarea { resize: vertical; min-height: 80px; }
+.home-content { padding: 16px; }
 
-  .btn {
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.5px;
-  }
-  .btn-primary {
-    background: var(--gold);
-    color: var(--white);
-  }
-  .btn-primary:hover { background: var(--gold-light); }
-  .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-  .btn-secondary {
-    background: transparent;
-    color: var(--charcoal);
-    border: 1px solid var(--border);
-    margin-top: 10px;
-  }
-  .btn-success {
-    background: var(--green);
-    color: var(--white);
-  }
-  .btn-danger {
-    background: var(--red);
-    color: var(--white);
-    margin-top: 10px;
-  }
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.stat-num { font-size: 28px; font-weight: 700; color: var(--charcoal); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 0.04em; }
 
-  .error-msg {
-    background: #FDECEA;
-    color: var(--red);
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 16px;
-  }
-  .success-msg {
-    background: #E8F8EE;
-    color: var(--green);
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 16px;
-  }
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
 
-  /* ── Main content ── */
-  .content { padding: 20px; max-width: 600px; margin: 0 auto; }
+.btn-register {
+  width: 100%;
+  background: var(--gold);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius);
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(184,150,62,0.3);
+  transition: all 0.15s;
+  margin-bottom: 20px;
+}
+.btn-register:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-register:active { transform: translateY(0); }
 
-  /* ── Upload zone ── */
-  .upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 40px 20px;
-    text-align: center;
-    background: var(--white);
-    cursor: pointer;
-    transition: border-color 0.2s;
-    margin-bottom: 20px;
-  }
-  .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--gold);
-    background: #FFFDF7;
-  }
-  .upload-zone input { display: none; }
-  .upload-icon { font-size: 40px; margin-bottom: 12px; }
-  .upload-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
-  .upload-sub { font-size: 13px; color: var(--muted); }
+/* Product list */
+.product-list { display: flex; flex-direction: column; gap: 10px; }
+.product-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  border: 1px solid transparent;
+}
+.product-card:hover { box-shadow: var(--shadow-md); border-color: var(--gold-pale); }
+.product-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  background: var(--cream-dark);
+  object-fit: cover;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--border);
+  overflow: hidden;
+}
+.product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.product-info { flex: 1; min-width: 0; }
+.product-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--charcoal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.product-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.product-price { font-size: 15px; font-weight: 700; color: var(--gold); margin-top: 4px; }
+.product-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.badge-ok { background: var(--green-pale); color: var(--green); }
+.badge-warn { background: var(--red-pale); color: var(--red); }
+.badge-none { background: var(--cream-dark); color: var(--muted); }
 
-  /* ── Image previews ── */
-  .preview-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-  .preview-item {
-    position: relative;
-    aspect-ratio: 1;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--border);
-  }
-  .preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .preview-item .remove-img {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(0,0,0,0.6);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--muted);
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; }
 
-  /* ── AI result card ── */
-  .ai-card {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-  }
-  .ai-card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .ai-badge {
-    background: var(--gold);
-    color: white;
-    font-size: 10px;
-    letter-spacing: 1px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
-  }
-  .ai-card-header span {
-    font-size: 13px;
-    color: var(--muted);
-  }
+/* ===== REGISTER SCREEN ===== */
+.register-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-back {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--charcoal);
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.screen-title { font-size: 16px; font-weight: 700; }
 
-  /* ── Step indicator ── */
-  .steps {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    margin-bottom: 24px;
-  }
-  .step {
-    flex: 1;
-    text-align: center;
-    font-size: 11px;
-    color: var(--muted);
-    padding: 8px 4px;
-    border-bottom: 2px solid var(--border);
-    transition: all 0.2s;
-  }
-  .step.active {
-    color: var(--gold);
-    border-bottom-color: var(--gold);
-    font-weight: 600;
-  }
-  .step.done {
-    color: var(--green);
-    border-bottom-color: var(--green);
-  }
+.register-body { padding: 16px; padding-bottom: 100px; }
 
-  /* ── Loading ── */
-  .loading-wrap {
-    text-align: center;
-    padding: 40px 20px;
-  }
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 16px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: var(--muted); font-size: 14px; }
+/* Step indicator */
+.steps {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+}
+.step {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.03em;
+}
+.step.active {
+  background: var(--charcoal);
+  color: var(--white);
+}
+.step.done { color: var(--gold); }
 
-  /* ── Result summary ── */
-  .result-card {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 24px;
-    text-align: center;
-    box-shadow: var(--shadow);
-  }
-  .result-icon { font-size: 48px; margin-bottom: 16px; }
-  .result-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-  .result-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
-  .result-detail {
-    background: var(--cream);
-    border-radius: 8px;
-    padding: 16px;
-    text-align: left;
-    font-size: 13px;
-    line-height: 2;
-    margin-bottom: 20px;
-  }
+/* Form sections */
+.form-section {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-section.active { display: flex; }
 
-  .section-title {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-  }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.form-label .required { color: var(--red); margin-left: 2px; }
+.form-label .optional {
+  font-weight: 400;
+  color: var(--border);
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
 
-  .price-calc {
-    background: #FFFDF7;
-    border: 1px solid var(--gold-light);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 16px;
-    font-size: 13px;
-  }
-  .price-calc .ref-price {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--gold);
-    margin-top: 4px;
-  }
+.form-input, .form-select, .form-textarea {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  font-size: 15px;
+  color: var(--charcoal);
+  font-family: inherit;
+  transition: border-color 0.15s;
+  width: 100%;
+  -webkit-appearance: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+
+/* Type select with master */
+.type-input-wrap { position: relative; }
+.type-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--white);
+  border: 1.5px solid var(--gold);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  z-index: 50;
+  max-height: 160px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  display: none;
+}
+.type-suggestions.open { display: block; }
+.suggestion-item {
+  padding: 10px 13px;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--cream-dark);
+  transition: background 0.1s;
+}
+.suggestion-item:hover { background: var(--gold-pale); }
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-new {
+  padding: 10px 13px;
+  font-size: 13px;
+  color: var(--gold);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.suggestion-new:hover { background: var(--gold-pale); }
+
+/* Mode selector */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.mode-btn {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.mode-btn:hover { border-color: var(--gold); background: var(--gold-pale); }
+.mode-btn:active { transform: scale(0.97); }
+.mode-icon { font-size: 28px; margin-bottom: 6px; }
+.mode-label { font-size: 12px; font-weight: 700; color: var(--charcoal); }
+.mode-hint { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.add-more-row { display: flex; gap: 8px; margin-top: 8px; }
+.btn-add-more {
+  flex: 1;
+  background: var(--white);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn-add-more:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Image upload */
+.image-upload-area {
+  background: var(--white);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.image-upload-area:hover { border-color: var(--gold); background: var(--gold-pale); }
+.image-upload-area input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.upload-icon { font-size: 36px; margin-bottom: 8px; }
+.upload-text { font-size: 13px; color: var(--muted); }
+.upload-hint { font-size: 11px; color: var(--border); margin-top: 4px; }
+
+.image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.preview-item {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  background: var(--cream-dark);
+}
+.preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.preview-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* AI read button */
+.btn-ai {
+  width: 100%;
+  background: var(--charcoal);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+.btn-ai:hover { background: var(--charcoal-light); }
+.btn-ai:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ai-result {
+  background: var(--green-pale);
+  border: 1.5px solid var(--green);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 13px;
+  color: var(--green);
+  display: none;
+}
+.ai-result.visible { display: block; }
+
+/* Size multiselect */
+.size-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.size-btn {
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.size-btn.selected {
+  background: var(--charcoal);
+  color: var(--white);
+  border-color: var(--charcoal);
+}
+
+/* Number row */
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Select styled */
+.form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8680' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* Bottom nav buttons */
+.bottom-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  gap: 10px;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+}
+.btn-prev, .btn-next, .btn-submit {
+  flex: 1;
+  padding: 13px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+.btn-prev {
+  background: var(--cream-dark);
+  color: var(--charcoal);
+  border: 1.5px solid var(--border);
+}
+.btn-next {
+  background: var(--charcoal);
+  color: var(--white);
+  flex: 2;
+}
+.btn-submit {
+  background: var(--gold);
+  color: var(--white);
+  flex: 2;
+  box-shadow: 0 4px 12px rgba(184,150,62,0.3);
+}
+
+/* ===== DETAIL SCREEN ===== */
+.detail-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-body { padding: 16px; padding-bottom: 32px; }
+
+.detail-images {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.detail-img-main {
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  background: var(--cream-dark);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: var(--border);
+}
+.detail-img-main img { width: 100%; height: 100%; object-fit: cover; }
+.detail-img-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-img-thumb {
+  flex: 1;
+  border-radius: var(--radius-sm);
+  background: var(--cream-dark);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--border);
+}
+.detail-img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.detail-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.detail-card-title {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  background: var(--cream-dark);
+  border-bottom: 1px solid var(--border);
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--cream-dark);
+  gap: 12px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-key { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+.detail-val { font-size: 14px; font-weight: 600; color: var(--charcoal); text-align: right; word-break: break-all; }
+.detail-val.gold { color: var(--gold); }
+.detail-val.green { color: var(--green); }
+.detail-val.red { color: var(--red); }
+
+.btn-edit {
+  background: var(--charcoal);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== SETTINGS ===== */
+.settings-body { padding: 16px; }
+.settings-section { margin-bottom: 24px; }
+.settings-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cream-dark);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-key { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.settings-input {
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: monospace;
+  color: var(--charcoal);
+  width: 100%;
+}
+.settings-input:focus { outline: none; border-color: var(--gold); }
+
+.btn-save-settings {
+  width: 100%;
+  background: var(--gold);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* ===== LOADING ===== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28,28,28,0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  display: none;
+}
+.loading-overlay.active { display: flex; }
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: var(--gold-light);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--white); font-size: 14px; font-weight: 600; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 80px; left: 16px; right: 16px;
+  background: var(--charcoal);
+  color: var(--white);
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 300;
+  transform: translateY(120%);
+  transition: transform 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toast.show { transform: translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+
+/* ===== BUYMA URL PREVIEW ===== */
+.url-preview {
+  font-size: 11px;
+  color: var(--blue);
+  background: var(--blue-pale);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  word-break: break-all;
+  margin-top: 4px;
+  display: none;
+}
+.url-preview.visible { display: block; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN REMOVED -->
-
-<!-- SETTINGS SCREEN -->
-<div id="screen-settings" class="screen">
-  <div class="header">
-    <div class="header-logo">Margary</div>
-    <div class="header-user">
-      <button class="logout-btn" onclick="hideSettings()">← 戻る</button>
-    </div>
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-logo">MARGARY<span> | 商品登録</span></div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="showScreen('settings')" title="設定">⚙️</button>
   </div>
-  <div class="content">
-    <div class="ai-card">
-      <div class="section-title" style="margin-bottom:16px">⚙️ API設定</div>
+</header>
 
-      <div class="form-group">
-        <label>
-          <span class="api-status" id="anthropic-status"></span>
-          Anthropic APIキー
-        </label>
-        <input type="password" id="s-anthropic-key" placeholder="sk-ant-api03-...">
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">
-          console.anthropic.com → API Keys で取得
-        </div>
+<!-- ===== HOME SCREEN ===== -->
+<div id="screen-home" class="screen active">
+  <div class="home-brand-bar">
+    <button class="brand-tab active" onclick="selectBrand('PRADA', this)">PRADA</button>
+    <button class="brand-tab" onclick="selectBrand('MIU MIU', this)">MIU MIU</button>
+  </div>
+
+  <div class="home-content">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total">0</div>
+        <div class="stat-label">登録商品数</div>
       </div>
-
-
-
-      <div id="settings-msg" style="display:none;margin-bottom:12px"></div>
-
-      <button class="btn btn-primary" onclick="saveSettings()">保存する</button>
-      <button class="btn btn-secondary" onclick="hideSettings()">キャンセル</button>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-warn" style="color:var(--red)">0</div>
+        <div class="stat-label">⚠️ 要確認</div>
+      </div>
     </div>
 
-    <div class="ai-card" style="margin-top:16px">
-      <div class="section-title" style="margin-bottom:12px">📋 設定状況</div>
-      <div style="font-size:13px;line-height:2.2">
-        <span class="api-status" id="check-anthropic"></span> Anthropic APIキー<br>
-<span style="color:var(--green);font-size:12px">✅ Notion: サーバー設定済み</span>
+    <button class="btn-register" onclick="startRegister()">
+      ＋ 新規商品を登録
+    </button>
+
+    <div class="section-title" id="list-title">PRADA — 登録済み商品</div>
+    <div class="product-list" id="product-list">
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <div class="empty-text">まだ商品が登録されていません</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MAIN APP SCREEN -->
-<div id="screen-app" class="screen active">
-  <div class="header">
-    <div class="header-logo">Margary</div>
-    <div class="header-user">
-      
-      <button class="settings-btn" onclick="showSettings()">⚙️ 設定</button>
-      <button class="logout-btn" onclick="doLogout()">ログアウト</button>
-    </div>
+<!-- ===== REGISTER SCREEN ===== -->
+<div id="screen-register" class="screen">
+  <div class="register-header">
+    <button class="btn-back" onclick="showScreen('home')">←</button>
+    <div class="screen-title" id="register-title">新規登録 — PRADA</div>
   </div>
 
-  <div class="content">
+  <div class="register-body">
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step active" id="step-1" onclick="goToStep(1)">① 画像</div>
+      <div class="step" id="step-2" onclick="goToStep(2)">② 型式</div>
+      <div class="step" id="step-3" onclick="goToStep(3)">③ 価格</div>
+      <div class="step" id="step-4" onclick="goToStep(4)">④ 詳細</div>
+    </div>
 
-    <!-- STEP 1: Upload -->
-    <div id="step1">
-      <div class="steps">
-        <div class="step active">① 画像</div>
-        <div class="step">② 確認・修正</div>
-        <div class="step">③ 登録</div>
+    <!-- Step 1: 画像 -->
+    <div class="form-section active" id="section-1">
+
+      <!-- 入力方式選択 -->
+      <div class="form-group">
+        <div class="form-label">登録方法を選択</div>
+        <div class="mode-grid">
+          <button class="mode-btn" onclick="openCamera('label')">
+            <div class="mode-icon">📸</div>
+            <div class="mode-label">カメラで撮影</div>
+            <div class="mode-hint">ラベルを直接撮影</div>
+          </button>
+          <button class="mode-btn" onclick="openLibrary('label')">
+            <div class="mode-icon">🖼️</div>
+            <div class="mode-label">画像を取り込み</div>
+            <div class="mode-hint">フォトライブラリから</div>
+          </button>
+          <button class="mode-btn" onclick="skipToManual()">
+            <div class="mode-icon">✍️</div>
+            <div class="mode-label">手動入力</div>
+            <div class="mode-hint">画像なしで進む</div>
+          </button>
+        </div>
       </div>
-
-      <div class="section-title">登録方法を選択</div>
 
       <!-- Hidden file inputs -->
-      <input type="file" id="file-input-camera" accept="image/*" capture="environment" onchange="handleFiles(this.files)" style="display:none">
-      <input type="file" id="file-input-library" accept="image/*" multiple onchange="handleFiles(this.files)" style="display:none">
+      <input type="file" accept="image/*" capture="environment" id="camera-input-label" style="display:none" onchange="handleImages(event,'label')">
+      <input type="file" accept="image/*" multiple id="library-input-label" style="display:none" onchange="handleImages(event,'label')">
+      <input type="file" accept="image/*" capture="environment" id="camera-input-product" style="display:none" onchange="handleImages(event,'product')">
+      <input type="file" accept="image/*" multiple id="library-input-product" style="display:none" onchange="handleImages(event,'product')">
 
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
-        <button class="btn btn-primary" onclick="document.getElementById('file-input-camera').click()" style="font-size:17px;padding:18px;display:flex;align-items:center;justify-content:center;gap:10px">
-          <span style="font-size:24px">📷</span> カメラでラベルを撮影
-        </button>
-        <button class="btn btn-secondary" onclick="document.getElementById('file-input-library').click()" style="font-size:15px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px">
-          <span style="font-size:20px">🖼️</span> ライブラリから選択
-        </button>
-        <button class="btn btn-secondary" onclick="goToManualInput()" style="font-size:15px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px">
-          <span style="font-size:20px">✏️</span> 手動で入力する
-        </button>
-      </div>
-
-      <div id="preview-grid" class="preview-grid" style="display:none"></div>
-
-      <div id="analyze-section" style="display:none">
-        <div class="price-calc">
-          <div style="font-size:12px;color:var(--muted)">AIがラベルから自動抽出します</div>
-          <div style="font-size:13px;margin-top:4px">品番・ブランド・価格・カラーを読み取ります</div>
-        </div>
-        <button class="btn btn-primary" id="analyze-btn" onclick="analyzeImages()" style="margin-bottom:10px">
-          🤖 AIで自動読み取り
-        </button>
-        <button class="btn btn-secondary" onclick="goToManualInput()">
-          ✏️ 手動で入力する
-        </button>
-      </div>
-    </div>
-
-    <!-- STEP 2: Confirm / Edit -->
-    <div id="step2" style="display:none">
-      <div class="steps">
-        <div class="step done">① 画像</div>
-        <div class="step active">② 確認・修正</div>
-        <div class="step">③ 登録</div>
-      </div>
-
-      <div id="loading-wrap" class="loading-wrap" style="display:none">
-        <div class="spinner"></div>
-        <div class="loading-text">ラベルを解析中...</div>
-      </div>
-
-      <div id="edit-form" style="display:none">
-        <div class="ai-card">
-          <div class="ai-card-header">
-            <span class="ai-badge">AI抽出</span>
-            <span>内容を確認・修正してください</span>
-          </div>
-
-          <div class="form-group">
-            <label>ブランド</label>
-            <select id="f-brand">
-              <option>LOEWE</option><option>PRADA</option><option>MIU MIU</option>
-              <option>GUCCI</option><option>CELINE</option><option>BOTTEGA VENETA</option>
-              <option>SAINT LAURENT</option><option>BURBERRY</option><option>FENDI</option>
-              <option>VALENTINO</option><option>その他</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>品番</label>
-            <input type="text" id="f-sku" placeholder="例: B906Q63X04">
-          </div>
-          <div class="form-group">
-            <label>モデル名</label>
-            <input type="text" id="f-model" placeholder="例: CUBI CROSSBODY">
-          </div>
-          <div class="form-group">
-            <label>カラー</label>
-            <input type="text" id="f-color" placeholder="例: ASPHALT GREY">
-          </div>
-          <div class="form-group">
-            <label>カテゴリ</label>
-            <select id="f-category">
-              <option>バッグ</option><option>財布・小物</option><option>シューズ</option>
-              <option>アクセサリー</option><option>アパレル</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>アウトレット価格（EUR）</label>
-            <input type="number" id="f-price" placeholder="例: 1050" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>仕入れ日</label>
-            <input type="date" id="f-date">
-          </div>
-          <div class="form-group">
-            <label>仕入れ店舗</label>
-            <select id="f-store">
-              <option>Las Rozas Village</option><option>La Roca Village</option>
-              <option>その他アウトレット</option><option>直営店</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>買付アカウント</label>
-            <select id="f-account">
-              <option value="M">Margary（M）</option>
-              <option value="other">その他</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>在庫数</label>
-            <input type="number" id="f-stock" value="0" min="0">
-          </div>
-          <div class="form-group">
-            <label>サイズ</label>
-            <select id="f-size">
-              <option>フリー</option><option>XS</option><option>S</option><option>M</option>
-              <option>L</option><option>XL</option><option>35</option><option>36</option>
-              <option>37</option><option>38</option><option>39</option><option>40</option>
-              <option>41</option><option>42</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>メモ</label>
-            <textarea id="f-memo" placeholder="特記事項があれば"></textarea>
-          </div>
-
-          <div id="price-preview" class="price-calc" style="display:none">
-            <div style="font-size:12px;color:var(--muted)">参考価格（円）※ 1EUR = 190円</div>
-            <div class="ref-price" id="ref-price-display">¥0</div>
-          </div>
+      <div class="form-group">
+        <div class="form-label">ラベル画像<span class="optional">AI読み取り用</span></div>
+        <div class="image-preview-grid" id="label-img-preview"></div>
+        <div class="add-more-row" id="label-add-row" style="display:none">
+          <button class="btn-add-more" onclick="openCamera('label')">📸 撮影追加</button>
+          <button class="btn-add-more" onclick="openLibrary('label')">🖼️ 取込追加</button>
         </div>
 
-        <button class="btn btn-primary" onclick="goToStep3()">次へ → 登録確認</button>
-        <button class="btn btn-secondary" onclick="resetApp()">← やり直す</button>
-      </div>
-    </div>
-
-    <!-- STEP 3: Confirm & Register -->
-    <div id="step3" style="display:none">
-      <div class="steps">
-        <div class="step done">① 画像</div>
-        <div class="step done">② 確認・修正</div>
-        <div class="step active">③ 登録</div>
-      </div>
-
-      <div class="ai-card">
-        <div class="section-title">登録内容の確認</div>
-        <div id="confirm-summary" class="result-detail"></div>
-        <div id="register-error" class="error-msg" style="display:none"></div>
-        <div id="register-success" class="success-msg" style="display:none"></div>
-        <button class="btn btn-success" id="register-btn" onclick="registerToNotion()">
-          ✅ Notionに登録する
+        <button class="btn-ai" id="btn-ai-read" onclick="aiReadLabel()" disabled>
+          🤖 ラベルをAIで読み取る
         </button>
-        <button class="btn btn-secondary" onclick="goBackToStep2()">← 修正する</button>
+        <div class="ai-result" id="ai-result">
+          ✅ 読み取り完了。次のステップで内容を確認してください。
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">商品画像<span class="optional">複数可</span></div>
+        <div class="image-preview-grid" id="product-img-preview"></div>
+        <div class="add-more-row">
+          <button class="btn-add-more" onclick="openCamera('product')">📸 撮影</button>
+          <button class="btn-add-more" onclick="openLibrary('product')">🖼️ 取込</button>
+        </div>
       </div>
     </div>
 
-    <!-- STEP 4: Done -->
-    <div id="step4" style="display:none">
-      <div class="result-card">
-        <div class="result-icon">✅</div>
-        <div class="result-title">登録完了！</div>
-        <div class="result-sub" id="done-message"></div>
-        <div id="done-detail" class="result-detail"></div>
-        <button class="btn btn-primary" onclick="resetApp()">続けて登録する</button>
+    <!-- Step 2: 型式 -->
+    <div class="form-section" id="section-2">
+      <div class="form-group">
+        <div class="form-label">型式1<span class="required">*</span></div>
+        <div class="type-input-wrap">
+          <input class="form-input" id="input-type1" placeholder="例：2UH011"
+            oninput="filterSuggestions('type1', this.value)"
+            onfocus="filterSuggestions('type1', this.value)"
+            onblur="hideSuggestionsDelayed('type1')">
+          <div class="type-suggestions" id="sug-type1"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">型式2<span class="optional">任意</span></div>
+        <div class="type-input-wrap">
+          <input class="form-input" id="input-type2" placeholder="例：2DYK_GLASS BOTTE"
+            oninput="filterSuggestions('type2', this.value)"
+            onfocus="filterSuggestions('type2', this.value)"
+            onblur="hideSuggestionsDelayed('type2')">
+          <div class="type-suggestions" id="sug-type2"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">型式3<span class="optional">任意</span></div>
+        <div class="type-input-wrap">
+          <input class="form-input" id="input-type3" placeholder="例：F035G_ABETE"
+            oninput="filterSuggestions('type3', this.value)"
+            onfocus="filterSuggestions('type3', this.value)"
+            onblur="hideSuggestionsDelayed('type3')">
+          <div class="type-suggestions" id="sug-type3"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">モデル<span class="optional">例：GALLERIA、CLEO</span></div>
+        <input class="form-input" id="input-model" placeholder="モデル名を入力">
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">カテゴリ</div>
+        <select class="form-select" id="input-category">
+          <option value="">選択してください</option>
+          <option value="バッグ">バッグ</option>
+          <option value="財布・小物">財布・小物</option>
+          <option value="シューズ">シューズ</option>
+          <option value="アクセサリー">アクセサリー</option>
+          <option value="アパレル">アパレル</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">サイズ展開<span class="optional">複数選択可</span></div>
+        <div class="size-grid" id="size-grid">
+          <button class="size-btn" onclick="toggleSize(this)">XS</button>
+          <button class="size-btn" onclick="toggleSize(this)">S</button>
+          <button class="size-btn" onclick="toggleSize(this)">M</button>
+          <button class="size-btn" onclick="toggleSize(this)">L</button>
+          <button class="size-btn" onclick="toggleSize(this)">XL</button>
+          <button class="size-btn" onclick="toggleSize(this)">34</button>
+          <button class="size-btn" onclick="toggleSize(this)">35</button>
+          <button class="size-btn" onclick="toggleSize(this)">36</button>
+          <button class="size-btn" onclick="toggleSize(this)">37</button>
+          <button class="size-btn" onclick="toggleSize(this)">38</button>
+          <button class="size-btn" onclick="toggleSize(this)">39</button>
+          <button class="size-btn" onclick="toggleSize(this)">40</button>
+          <button class="size-btn" onclick="toggleSize(this)">41</button>
+          <button class="size-btn" onclick="toggleSize(this)">42</button>
+          <button class="size-btn" onclick="toggleSize(this)">ワンサイズ</button>
+        </div>
       </div>
     </div>
 
+    <!-- Step 3: 価格 -->
+    <div class="form-section" id="section-3">
+      <div class="input-row">
+        <div class="form-group">
+          <div class="form-label">買付価格EUR<span class="required">*</span></div>
+          <input class="form-input" id="input-buy-eur" type="number" step="0.01" placeholder="0.00" oninput="updateCalc()">
+        </div>
+        <div class="form-group">
+          <div class="form-label">販売価格JPY</div>
+          <input class="form-input" id="input-sell-jpy" type="number" placeholder="0" oninput="updateCalc()">
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="form-group">
+          <div class="form-label">参考価格EUR</div>
+          <input class="form-input" id="input-ref-eur" type="number" step="0.01" placeholder="0.00" oninput="updateCalc()">
+        </div>
+        <div class="form-group">
+          <div class="form-label">参考価格JPY<span class="optional">自動計算</span></div>
+          <input class="form-input" id="input-ref-jpy" type="number" placeholder="自動計算" readonly style="background:var(--cream-dark);color:var(--muted)">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">利益（概算）</div>
+        <div id="calc-profit" style="padding:12px 13px;background:var(--cream-dark);border-radius:var(--radius-sm);font-size:16px;font-weight:700;color:var(--muted);">
+          — 円
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">箱サイズ</div>
+        <select class="form-select" id="input-box-size">
+          <option value="">選択してください</option>
+          <option value="ACCESORIO">ACCESORIO（26×16×6 cm｜€20.76）</option>
+          <option value="MINI">MINI（26×20×9 cm｜€20.76）</option>
+          <option value="PEQUENA">PEQUENA（26×22×11 cm｜€31.10）</option>
+          <option value="BAJITA">BAJITA（29×24×9 cm｜€31.10）</option>
+          <option value="CORREO">CORREO（36×24×14 cm｜€31.61）</option>
+          <option value="MONCLER">MONCLER（44×32×13 cm｜€43.45）</option>
+          <option value="MONCLER ALTA">MONCLER ALTA（44×32×19 cm｜€60.76）</option>
+          <option value="NEWROCK">NEWROCK（44×32×19 cm｜€60.76）</option>
+          <option value="OTRO">OTRO（50×50×50 cm｜€100）</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Step 4: 詳細 -->
+    <div class="form-section" id="section-4">
+      <div class="form-group">
+        <div class="form-label">BUYMA競合URL<span class="optional">自動生成</span></div>
+        <div class="url-preview visible" id="buyma-url-preview" style="display:none">-</div>
+        <button class="btn-ai" onclick="generateBuymaUrl()" style="margin-top:8px">
+          🔗 競合URLを生成
+        </button>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">BUYMA出品URL<span class="optional">出品後に登録</span></div>
+        <input class="form-input" id="input-buyma-url" type="url" placeholder="https://www.buyma.com/...">
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">MEMO</div>
+        <textarea class="form-textarea" id="input-memo" placeholder="備考・注意事項など"></textarea>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">商品名<span class="optional">自動生成プレビュー</span></div>
+        <div id="product-name-preview" style="padding:12px 13px;background:var(--cream-dark);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--charcoal-light);word-break:break-all;min-height:44px;">
+          型式と価格を入力すると自動生成されます
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar" id="bottom-bar">
+    <button class="btn-prev" id="btn-prev" onclick="prevStep()" style="display:none">← 戻る</button>
+    <button class="btn-next" id="btn-next" onclick="nextStep()">次へ →</button>
+    <button class="btn-submit" id="btn-submit" onclick="submitProduct()" style="display:none">✅ Notionに登録</button>
   </div>
 </div>
 
+<!-- ===== DETAIL SCREEN ===== -->
+<div id="screen-detail" class="screen">
+  <div class="detail-header">
+    <button class="btn-back" onclick="showScreen('home')">←</button>
+    <div class="screen-title" id="detail-brand-label">PRADA</div>
+    <button class="btn-edit" id="btn-detail-edit" onclick="startEdit()">編集</button>
+  </div>
+  <div class="detail-body" id="detail-body">
+    <!-- Populated dynamically -->
+  </div>
+</div>
+
+<!-- ===== SETTINGS SCREEN ===== -->
+<div id="screen-settings" class="screen">
+  <div class="register-header">
+    <button class="btn-back" onclick="showScreen('home')">←</button>
+    <div class="screen-title">設定</div>
+  </div>
+  <div class="settings-body">
+    <div class="section-title">API設定</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="settings-key">Anthropic API Key</div>
+        <input class="settings-input" id="setting-anthropic" type="password" placeholder="sk-ant-...">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">Notion Token</div>
+        <input class="settings-input" id="setting-notion" type="password" placeholder="secret_...">
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:24px">Notion DB設定</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="settings-key">PRADA 商品DB ID</div>
+        <input class="settings-input" id="setting-prada-db" placeholder="3365f467-b41c-4a7f-9d9b-8d75038337a6">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">MIU MIU 商品DB ID</div>
+        <input class="settings-input" id="setting-miumiu-db" placeholder="731cb452-1ff9-4647-9b29-d7857470b537">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">PRADA 型式マスタ DB ID</div>
+        <input class="settings-input" id="setting-prada-type-db" placeholder="114bfd8d-14e0-48a1-9e69-b2a93ad711e3">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">MIU MIU 型式マスタ DB ID</div>
+        <input class="settings-input" id="setting-miumiu-type-db" placeholder="c26ce866-2a6f-4a12-8be1-6dd97d42783b">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">カテゴリマスタ DB ID</div>
+        <input class="settings-input" id="setting-cat-db" placeholder="f5ed20ad-529e-44d9-a305-64efc2d65fd7">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">箱サイズマスタ DB ID</div>
+        <input class="settings-input" id="setting-box-db" placeholder="c95b4624-8db6-4e5b-a1c8-d6ab659a7975">
+      </div>
+    </div>
+    <button class="btn-save-settings" onclick="saveSettings()">💾 設定を保存</button>
+
+    <div style="margin-top:32px;padding:16px;background:var(--cream-dark);border-radius:var(--radius);font-size:12px;color:var(--muted);">
+      <div style="font-weight:700;margin-bottom:6px;color:var(--charcoal)">DB IDは設定済みです</div>
+      NotionのDB IDはすでに上記に入力されています。Anthropic APIキーとNotionトークンを入力して保存してください。
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">処理中...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-// ── Config ──
-const NOTION_DS_PRODUCTS = '9e95822d-a525-42c7-81da-c2b725c649a5';
-const NOTION_DS_INVENTORY = 'c55bd93b-3920-410e-b21a-88b828408130';
+// ===== STATE =====
+let currentBrand = 'PRADA';
+let currentStep = 1;
+let productImages = [];
+let labelImages = [];
+let suggestTimer = {};
+let typeMasters = { PRADA: { type1: [], type2: [], type3: [] }, 'MIU MIU': { type1: [], type2: [], type3: [] } };
+let products = { PRADA: [], 'MIU MIU': [] };
+let aiExtracted = {};
+let editingProductId = null;
 
-// ── No login required ──
+const DB_IDS = {
+  PRADA: '3365f467-b41c-4a7f-9d9b-8d75038337a6',
+  'MIU MIU': '731cb452-1ff9-4647-9b29-d7857470b537',
+  PRADA_TYPE: '114bfd8d-14e0-48a1-9e69-b2a93ad711e3',
+  MIUMIU_TYPE: 'c26ce866-2a6f-4a12-8be1-6dd97d42783b',
+  CATEGORY: 'f5ed20ad-529e-44d9-a305-64efc2d65fd7',
+  BOX: 'c95b4624-8db6-4e5b-a1c8-d6ab659a7975',
+};
 
-// ── State ──
-let currentUser = null;
-let uploadedImages = []; // {file, base64}
-let extractedData = {};
-let notionApiKey = null;
-let anthropicApiKey = null;
-
-// ── API Keys (localStorage保存) ──
-function loadApiKeys() {
-  anthropicApiKey = localStorage.getItem('margary_anthropic_key') || null;
-  notionApiKey = 'server-side';
-  updateApiStatus();
-}
-
-function updateApiStatus() {
-  const aOk = !!anthropicApiKey;
-  const nOk = !!notionApiKey;
-  ['anthropic-status','check-anthropic'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.className = 'api-status ' + (aOk ? 'ok' : 'ng'); }
+// ===== SETTINGS =====
+function loadSettings() {
+  const keys = ['anthropic','notion','prada-db','miumiu-db','prada-type-db','miumiu-type-db','cat-db','box-db'];
+  keys.forEach(k => {
+    const el = document.getElementById('setting-' + k);
+    if (el) el.value = localStorage.getItem('mg_' + k) || el.placeholder || '';
   });
-  
+  // Pre-fill DB IDs
+  const defaults = {
+    'prada-db': DB_IDS.PRADA,
+    'miumiu-db': DB_IDS['MIU MIU'],
+    'prada-type-db': DB_IDS.PRADA_TYPE,
+    'miumiu-type-db': DB_IDS.MIUMIU_TYPE,
+    'cat-db': DB_IDS.CATEGORY,
+    'box-db': DB_IDS.BOX,
+  };
+  Object.entries(defaults).forEach(([k, v]) => {
+    if (!localStorage.getItem('mg_' + k)) localStorage.setItem('mg_' + k, v);
+    const el = document.getElementById('setting-' + k);
+    if (el && !el.value) el.value = v;
+  });
 }
-
-function showSettings() {
-  const aKey = document.getElementById('s-anthropic-key');
-  const nKey = document.getElementById('s-notion-key');
-  if (aKey) aKey.value = anthropicApiKey || '';
-  if (nKey) nKey.value = notionApiKey || '';
-  updateApiStatus();
-  showScreen('screen-settings');
-}
-
-function hideSettings() {
-  showScreen('screen-app');
-}
-
 function saveSettings() {
-  const aKey = document.getElementById('s-anthropic-key').value.trim();
-  const nKey = 'server-side';
-  const msg = document.getElementById('settings-msg');
-
-  if (!aKey) {
-    msg.className = 'error-msg';
-    msg.textContent = 'Anthropic APIキーを入力してください';
-    msg.style.display = 'block';
-    return;
-  }
-
-  anthropicApiKey = aKey;
-  notionApiKey = nKey;
-  localStorage.setItem('margary_anthropic_key', aKey);
-  localStorage.setItem('margary_notion_key', nKey);
-
-  msg.className = 'success-msg';
-  msg.textContent = '✅ 保存しました！';
-  msg.style.display = 'block';
-  updateApiStatus();
-
-  setTimeout(() => { hideSettings(); }, 1200);
+  const keys = ['anthropic','notion','prada-db','miumiu-db','prada-type-db','miumiu-type-db','cat-db','box-db'];
+  keys.forEach(k => {
+    const el = document.getElementById('setting-' + k);
+    if (el && el.value) localStorage.setItem('mg_' + k, el.value);
+  });
+  showToast('設定を保存しました', 'success');
+  setTimeout(() => showScreen('home'), 800);
 }
+function getSetting(k) { return localStorage.getItem('mg_' + k) || ''; }
 
-function checkApiKeys() {
-  if (!anthropicApiKey) {
-    showSettings();
-    return false;
-  }
-  return true;
-}
-
-// ── Auto init ──
-function doLogout() {
-  resetApp();
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  currentUser = { id: 'staff', name: 'Staff' };
-  document.getElementById('header-username').textContent = '';
-  loadApiKeys();
-  if (!anthropicApiKey) {
-    setTimeout(() => showSettings(), 500);
-  }
-  // 価格入力のイベントリスナーは一度だけ登録
-  document.getElementById('f-price').addEventListener('input', updatePricePreview);
-});
-
-// ── Screen control ──
-function showScreen(id) {
+// ===== NAVIGATION =====
+function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'home') loadProductList();
+  if (name === 'settings') loadSettings();
 }
 
-// ── File handling ──
-function handleFiles(files) {
-  Array.from(files).forEach(file => {
+// ===== BRAND =====
+function selectBrand(brand, el) {
+  currentBrand = brand;
+  document.querySelectorAll('.brand-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('list-title').textContent = brand + ' — 登録済み商品';
+  loadProductList();
+  loadTypeMaster();
+}
+
+// ===== REGISTER =====
+function startRegister() {
+  resetForm();
+  document.getElementById('register-title').textContent = '新規登録 — ' + currentBrand;
+  showScreen('register');
+  goToStep(1);
+  loadTypeMaster();
+}
+
+function resetForm() {
+  productImages = []; labelImages = []; aiExtracted = {}; editingProductId = null;
+  document.getElementById('product-img-preview').innerHTML = '';
+  document.getElementById('label-img-preview').innerHTML = '';
+  document.getElementById('ai-result').classList.remove('visible');
+  document.getElementById('btn-ai-read').disabled = true;
+  document.getElementById('label-add-row').style.display = 'none';
+  ['input-type1','input-type2','input-type3','input-model','input-buy-eur',
+   'input-sell-jpy','input-ref-eur','input-ref-jpy','input-buyma-url','input-memo']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('input-category').value = '';
+  document.getElementById('input-box-size').value = '';
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('calc-profit').textContent = '— 円';
+  document.getElementById('product-name-preview').textContent = '型式と価格を入力すると自動生成されます';
+  document.getElementById('buyma-url-preview').style.display = 'none';
+}
+
+// ===== STEPS =====
+function goToStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.form-section').forEach((s,i) => {
+    s.classList.toggle('active', i+1 === n);
+  });
+  document.querySelectorAll('.step').forEach((s,i) => {
+    s.classList.remove('active','done');
+    if (i+1 === n) s.classList.add('active');
+    else if (i+1 < n) s.classList.add('done');
+  });
+  document.getElementById('btn-prev').style.display = n > 1 ? 'block' : 'none';
+  document.getElementById('btn-next').style.display = n < 4 ? 'block' : 'none';
+  document.getElementById('btn-submit').style.display = n === 4 ? 'block' : 'none';
+  if (n === 4) updateProductNamePreview();
+}
+function nextStep() { if (currentStep < 4) goToStep(currentStep + 1); }
+function prevStep() { if (currentStep > 1) goToStep(currentStep - 1); }
+
+// ===== INPUT MODES =====
+function openCamera(type) {
+  document.getElementById('camera-input-' + type).click();
+}
+function openLibrary(type) {
+  document.getElementById('library-input-' + type).click();
+}
+function skipToManual() {
+  goToStep(2);
+  showToast('手動入力モード：型式を入力してください');
+}
+
+// ===== IMAGE HANDLING =====
+function handleImages(event, type) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  const arr = type === 'product' ? productImages : labelImages;
+  const previewEl = document.getElementById(type + '-img-preview');
+  files.forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
-      uploadedImages.push({ file, base64: e.target.result });
-      renderPreviews();
+      arr.push({ file, dataUrl: e.target.result });
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      const idx = arr.length - 1;
+      item.innerHTML = `<img src="${e.target.result}"><button class="preview-remove" onclick="removeImage('${type}',${idx},this.parentNode)">×</button>`;
+      previewEl.appendChild(item);
+      if (type === 'label' && labelImages.length > 0) {
+        document.getElementById('btn-ai-read').disabled = false;
+        document.getElementById('label-add-row').style.display = 'flex';
+      }
     };
     reader.readAsDataURL(file);
   });
+  event.target.value = '';
+}
+function removeImage(type, idx, el) {
+  const arr = type === 'product' ? productImages : labelImages;
+  arr.splice(idx, 1);
+  el.remove();
+  if (type === 'label' && labelImages.length === 0) {
+    document.getElementById('btn-ai-read').disabled = true;
+  }
 }
 
-function renderPreviews() {
-  const grid = document.getElementById('preview-grid');
-  grid.style.display = uploadedImages.length ? 'grid' : 'none';
-  grid.innerHTML = uploadedImages.map((img, i) => `
-    <div class="preview-item">
-      <img src="${img.base64}">
-      <button class="remove-img" onclick="removeImage(${i})">×</button>
-    </div>
-  `).join('');
-  document.getElementById('analyze-section').style.display = uploadedImages.length ? 'block' : 'none';
-}
-
-function removeImage(idx) {
-  uploadedImages.splice(idx, 1);
-  renderPreviews();
-}
-
-// ── Manual input (no image) ──
-function goToManualInput() {
-  document.getElementById('step1').style.display = 'none';
-  document.getElementById('step2').style.display = 'block';
-  document.getElementById('loading-wrap').style.display = 'none';
-  document.getElementById('edit-form').style.display = 'block';
-  // Clear form
-  fillForm({});
-}
-
-// ── AI Analysis ──
-async function analyzeImages() {
-  if (!uploadedImages.length) return;
-  if (!checkApiKeys()) return;
-
-  document.getElementById('step1').style.display = 'none';
-  document.getElementById('step2').style.display = 'block';
-  document.getElementById('loading-wrap').style.display = 'block';
-  document.getElementById('edit-form').style.display = 'none';
-
-  // Build image content
-  const imageContent = uploadedImages.map(img => ({
-    type: 'image',
-    source: {
-      type: 'base64',
-      media_type: img.file.type || 'image/jpeg',
-      data: img.base64.split(',')[1]
-    }
-  }));
-
-  const prompt = `これらはラグジュアリーブランド商品のラベル・商品写真です。
-ラベルから以下の情報を抽出してJSONで返してください。
-見つからない場合は空文字にしてください。
-
-{
-  "brand": "ブランド名（LOEWE/PRADA/MIU MIU/GUCCI/CELINE/BOTTEGA VENETA/SAINT LAURENT/BURBERRY/FENDI/VALENTINO/その他）",
-  "sku": "品番",
-  "model": "モデル名（品番のアンダースコア以降）",
-  "color": "カラー名",
-  "price_eur": "価格（数字のみ）",
-  "date": "日付（YYYY-MM-DD形式）",
-  "account": "買付アカウント（MはMargary）",
-  "category": "カテゴリ推定（バッグ/財布・小物/シューズ/アクセサリー/アパレル）"
-}
-
-JSONのみ返してください。`;
-
+// ===== AI LABEL READ =====
+async function aiReadLabel() {
+  const apiKey = getSetting('anthropic');
+  if (!apiKey) { showToast('APIキーを設定してください', 'error'); showScreen('settings'); return; }
+  if (!labelImages.length) { showToast('ラベル画像を選択してください', 'error'); return; }
+  showLoading('ラベルを読み取り中...');
   try {
-    const response = await fetch('/api/analyze', {
+    const imageContents = labelImages.map(img => ({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: img.file.type || 'image/jpeg',
+        data: img.dataUrl.split(',')[1]
+      }
+    }));
+    imageContents.push({
+      type: 'text',
+      text: `このラベル画像から以下の情報を読み取ってJSONで返してください。
+フィールド：type1（型式1、英数字コード）、type2（型式2）、type3（型式3）、price_eur（価格、数値のみ）、model（モデル名、例GALLERIA等、わからなければ空）。
+必ずJSONのみ返してください。例：{"type1":"2UH011","type2":"2DYK_F0002","type3":"F0002_NERO","price_eur":850,"model":""}`
+    });
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: imageContents }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'APIエラー');
+    const text = data.content?.[0]?.text || '{}';
+    const clean = text.replace(/```json|```/g,'').trim();
+    aiExtracted = JSON.parse(clean);
+    // Fill form
+    if (aiExtracted.type1) document.getElementById('input-type1').value = aiExtracted.type1;
+    if (aiExtracted.type2) document.getElementById('input-type2').value = aiExtracted.type2;
+    if (aiExtracted.type3) document.getElementById('input-type3').value = aiExtracted.type3;
+    if (aiExtracted.price_eur) document.getElementById('input-buy-eur').value = aiExtracted.price_eur;
+    if (aiExtracted.model) document.getElementById('input-model').value = aiExtracted.model;
+    document.getElementById('ai-result').classList.add('visible');
+    hideLoading();
+    showToast('読み取り完了！内容を確認してください', 'success');
+    setTimeout(() => goToStep(2), 800);
+  } catch(e) {
+    hideLoading();
+    showToast('読み取りエラー: ' + e.message, 'error');
+  }
+}
+
+// ===== TYPE MASTER =====
+async function loadTypeMaster() {
+  const notionToken = getSetting('notion');
+  if (!notionToken) return;
+  const dbId = currentBrand === 'PRADA' ? getSetting('prada-type-db') : getSetting('miumiu-type-db');
+  if (!dbId) return;
+  try {
+    const res = await fetch(`https://api.anthropic.com/v1/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getSetting('anthropic'), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'You are a helpful assistant. Return only valid JSON.',
+        messages: [{ role: 'user', content: `Notion API経由で型式マスタを取得します。DB ID: ${dbId}, Notion Token: ${notionToken}。型式コードの一覧を{"type1":[],"type2":[],"type3":[]}形式で返してください。取得できない場合は空配列で返してください。` }],
+        mcp_servers: [{ type: 'url', url: 'https://mcp.notion.com/mcp', name: 'notion-mcp', authorization_token: notionToken }]
+      })
+    });
+    // For now use locally stored masters
+  } catch(e) {}
+  // Load from localStorage
+  const stored = localStorage.getItem('mg_type_' + currentBrand);
+  if (stored) typeMasters[currentBrand] = JSON.parse(stored);
+}
+
+function filterSuggestions(field, val) {
+  const suggestions = document.getElementById('sug-' + field);
+  const master = (typeMasters[currentBrand] || {})[field] || [];
+  const filtered = val ? master.filter(m => m.toLowerCase().includes(val.toLowerCase())) : master.slice(0, 20);
+  if (!filtered.length && !val) { suggestions.classList.remove('open'); return; }
+  let html = filtered.map(m => `<div class="suggestion-item" onmousedown="selectSuggestion('${field}','${m}')">${m}</div>`).join('');
+  if (val && !master.includes(val)) {
+    html += `<div class="suggestion-new" onmousedown="addToMaster('${field}','${val}')">＋ 「${val}」を新規登録</div>`;
+  }
+  suggestions.innerHTML = html;
+  suggestions.classList.toggle('open', html.length > 0);
+}
+function selectSuggestion(field, val) {
+  document.getElementById('input-' + field.replace('type','type')).value = val;
+  document.getElementById('sug-' + field).classList.remove('open');
+}
+function hideSuggestionsDelayed(field) {
+  setTimeout(() => document.getElementById('sug-' + field).classList.remove('open'), 200);
+}
+function addToMaster(field, val) {
+  const m = typeMasters[currentBrand] || { type1: [], type2: [], type3: [] };
+  if (!m[field].includes(val)) m[field].push(val);
+  typeMasters[currentBrand] = m;
+  localStorage.setItem('mg_type_' + currentBrand, JSON.stringify(m));
+  selectSuggestion(field, val);
+  showToast('型式マスタに追加しました', 'success');
+}
+
+// ===== SIZE =====
+function toggleSize(btn) { btn.classList.toggle('selected'); }
+function getSelectedSizes() {
+  return Array.from(document.querySelectorAll('.size-btn.selected')).map(b => b.textContent);
+}
+
+// ===== CALC =====
+function updateCalc() {
+  const buyEur = parseFloat(document.getElementById('input-buy-eur').value) || 0;
+  const sellJpy = parseFloat(document.getElementById('input-sell-jpy').value) || 0;
+  const refEur = parseFloat(document.getElementById('input-ref-eur').value) || 0;
+  if (refEur) document.getElementById('input-ref-jpy').value = Math.round(refEur * 190);
+  const profit = sellJpy - (buyEur * 190);
+  const el = document.getElementById('calc-profit');
+  if (sellJpy && buyEur) {
+    el.textContent = (profit >= 0 ? '+' : '') + profit.toLocaleString() + ' 円';
+    el.style.color = profit >= 0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    el.textContent = '— 円';
+    el.style.color = 'var(--muted)';
+  }
+  updateProductNamePreview();
+}
+
+function updateProductNamePreview() {
+  const t1 = document.getElementById('input-type1').value.trim();
+  const t2 = document.getElementById('input-type2').value.trim();
+  const t3 = document.getElementById('input-type3').value.trim();
+  const eur = document.getElementById('input-buy-eur').value;
+  const parts = [t1, t2, t3].filter(Boolean);
+  if (eur) parts.push('€' + parseFloat(eur).toFixed(2));
+  const name = parts.join('_');
+  document.getElementById('product-name-preview').textContent = name || '型式と価格を入力すると自動生成されます';
+}
+
+// ===== BUYMA URL =====
+function generateBuymaUrl() {
+  const t1 = document.getElementById('input-type1').value.trim();
+  const t2 = document.getElementById('input-type2').value.trim();
+  if (!t1) { showToast('型式1を入力してください', 'error'); return; }
+  const query = encodeURIComponent(t1 + (t2 ? ' ' + t2 : ''));
+  const url = `https://www.buyma.com/r/-P0F2OST1B1/?searchtext=${query}&order=3&display=120`;
+  document.getElementById('buyma-url-preview').textContent = url;
+  document.getElementById('buyma-url-preview').style.display = 'block';
+  showToast('競合URLを生成しました', 'success');
+}
+
+// ===== SUBMIT =====
+async function submitProduct() {
+  const notionToken = getSetting('notion');
+  if (!notionToken) { showToast('Notionトークンを設定してください', 'error'); showScreen('settings'); return; }
+  const dbId = currentBrand === 'PRADA' ? getSetting('prada-db') : getSetting('miumiu-db');
+  const t1 = document.getElementById('input-type1').value.trim();
+  if (!t1) { showToast('型式1は必須です', 'error'); goToStep(2); return; }
+
+  const buyEur = parseFloat(document.getElementById('input-buy-eur').value) || 0;
+  const sellJpy = parseFloat(document.getElementById('input-sell-jpy').value) || 0;
+  const refEur = parseFloat(document.getElementById('input-ref-eur').value) || 0;
+  const t2 = document.getElementById('input-type2').value.trim();
+  const t3 = document.getElementById('input-type3').value.trim();
+  const model = document.getElementById('input-model').value.trim();
+  const memo = document.getElementById('input-memo').value.trim();
+  const buymaUrl = document.getElementById('input-buyma-url').value.trim();
+  const boxSize = document.getElementById('input-box-size').value;
+  const sizes = getSelectedSizes();
+
+  const parts = [t1, t2, t3].filter(Boolean);
+  if (buyEur) parts.push('€' + buyEur.toFixed(2));
+  const productName = parts.join('_');
+
+  const buymaCompetitorUrl = document.getElementById('buyma-url-preview').textContent;
+
+  showLoading('Notionに登録中...');
+  try {
+    const properties = {
+      '商品名': { 'title': [{ 'text': { 'content': productName } }] },
+      '型式1': { 'rich_text': [{ 'text': { 'content': t1 } }] },
+    };
+    if (t2) properties['型式2'] = { 'rich_text': [{ 'text': { 'content': t2 } }] };
+    if (t3) properties['型式3'] = { 'rich_text': [{ 'text': { 'content': t3 } }] };
+    if (model) properties['モデル'] = { 'rich_text': [{ 'text': { 'content': model } }] };
+    if (buyEur) properties['買付価格EUR'] = { 'number': buyEur };
+    if (sellJpy) properties['販売価格JPY'] = { 'number': sellJpy };
+    if (refEur) properties['参考価格EUR'] = { 'number': refEur };
+    if (memo) properties['MEMO'] = { 'rich_text': [{ 'text': { 'content': memo } }] };
+    if (buymaUrl) properties['BUYMA出品URL'] = { 'url': buymaUrl };
+    if (buymaCompetitorUrl && buymaCompetitorUrl !== '-') properties['BUYMA競合URL'] = { 'url': buymaCompetitorUrl };
+    if (sizes.length) properties['サイズ展開'] = { 'multi_select': sizes.map(s => ({ 'name': s })) };
+
+    const res = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + notionToken,
+        'Notion-Version': '2022-06-28'
       },
-      body: JSON.stringify({
-        action: 'analyze',
-        images: uploadedImages.map(img => ({
-          mediaType: img.file.type || 'image/jpeg',
-          data: img.base64.split(',')[1]
-        }))
-      })
+      body: JSON.stringify({ parent: { database_id: dbId }, properties })
     });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Notionエラー');
 
-    const data = await response.json();
-    if (!response.ok) throw new Error('API Error ' + response.status + ': ' + (data.error || JSON.stringify(data)));
-    extractedData = data.result || {};
-    fillForm(extractedData);
-  } catch (e) {
-    extractedData = {};
-    fillForm({});
-    alert('AI読み取りエラー: ' + e.message);
-  }
+    // Add to type master
+    const typeKey = currentBrand === 'PRADA' ? 'prada-type-db' : 'miumiu-type-db';
+    if (t1) addToMasterSilent('type1', t1);
+    if (t2) addToMasterSilent('type2', t2);
+    if (t3) addToMasterSilent('type3', t3);
 
-  document.getElementById('loading-wrap').style.display = 'none';
-  document.getElementById('edit-form').style.display = 'block';
-}
-
-// ── Fill form ──
-function fillForm(d) {
-  if (d.brand) setSelect('f-brand', d.brand);
-  document.getElementById('f-sku').value = d.sku || '';
-  document.getElementById('f-model').value = d.model || '';
-  document.getElementById('f-color').value = d.color || '';
-  if (d.category) setSelect('f-category', d.category);
-  document.getElementById('f-price').value = d.price_eur || '';
-  document.getElementById('f-date').value = d.date || '';
-  document.getElementById('f-memo').value = '';
-  updatePricePreview();
-}
-
-function setSelect(id, val) {
-  const sel = document.getElementById(id);
-  for (let o of sel.options) {
-    if (o.value === val || o.text === val) { sel.value = o.value; break; }
+    hideLoading();
+    showToast('✅ Notionに登録しました！', 'success');
+    setTimeout(() => showScreen('home'), 1200);
+  } catch(e) {
+    hideLoading();
+    showToast('登録エラー: ' + e.message, 'error');
   }
 }
 
-function updatePricePreview() {
-  const price = parseFloat(document.getElementById('f-price').value) || 0;
-  const jpy = Math.round(price * 190);
-  const el = document.getElementById('ref-price-display');
-  const wrap = document.getElementById('price-preview');
-  if (price > 0) {
-    el.textContent = '¥' + jpy.toLocaleString();
-    wrap.style.display = 'block';
-  } else {
-    wrap.style.display = 'none';
+function addToMasterSilent(field, val) {
+  const m = typeMasters[currentBrand] || { type1: [], type2: [], type3: [] };
+  if (!m[field].includes(val)) {
+    m[field].push(val);
+    typeMasters[currentBrand] = m;
+    localStorage.setItem('mg_type_' + currentBrand, JSON.stringify(m));
   }
 }
 
-// ── Step 3 ──
-function goToStep3() {
-  const sku = document.getElementById('f-sku').value.trim();
-  const color = document.getElementById('f-color').value.trim();
-  const price = parseFloat(document.getElementById('f-price').value) || 0;
-  const jpy = Math.round(price * 190);
-
-  const productName = `${sku}_${color.replace(/ /g,'-')}_€${price}`;
-
-  document.getElementById('confirm-summary').innerHTML = `
-    <b>商品名：</b> ${productName}<br>
-    <b>ブランド：</b> ${document.getElementById('f-brand').value}<br>
-    <b>品番：</b> ${sku}<br>
-    <b>モデル：</b> ${document.getElementById('f-model').value}<br>
-    <b>カラー：</b> ${color}<br>
-    <b>カテゴリ：</b> ${document.getElementById('f-category').value}<br>
-    <b>価格：</b> €${price} → <b style="color:var(--gold)">¥${jpy.toLocaleString()}</b><br>
-    <b>仕入れ日：</b> ${document.getElementById('f-date').value}<br>
-    <b>店舗：</b> ${document.getElementById('f-store').value}<br>
-    <b>在庫数：</b> ${document.getElementById('f-stock').value}<br>
-    <b>サイズ：</b> ${document.getElementById('f-size').value}<br>
-    <b>登録者：</b> ${currentUser.name}
-  `;
-
-  document.getElementById('step2').style.display = 'none';
-  document.getElementById('step3').style.display = 'block';
-}
-
-function goBackToStep2() {
-  document.getElementById('step3').style.display = 'none';
-  document.getElementById('step2').style.display = 'block';
-}
-
-// ── Notion Register ──
-async function registerToNotion() {
-  if (!checkApiKeys()) return;
-
-  const btn = document.getElementById('register-btn');
-  btn.disabled = true;
-  btn.textContent = '登録中...';
-
-  const sku = document.getElementById('f-sku').value.trim();
-  const color = document.getElementById('f-color').value.trim();
-  const price = parseFloat(document.getElementById('f-price').value) || 0;
-  const productName = `${sku}_${color.replace(/ /g,'-')}_€${price}`;
-  const memo = `買付アカウント: ${document.getElementById('f-account').value === 'M' ? 'Margary（M）' : 'その他'} / ${color} / 登録者: Staff${document.getElementById('f-memo').value ? ' / ' + document.getElementById('f-memo').value : ''}`;
-
+// ===== PRODUCT LIST =====
+async function loadProductList() {
+  const notionToken = getSetting('notion');
+  if (!notionToken) {
+    document.getElementById('stat-total').textContent = '—';
+    return;
+  }
+  const dbId = currentBrand === 'PRADA' ? getSetting('prada-db') : getSetting('miumiu-db');
+  if (!dbId) return;
   try {
-    const response = await fetch('/api/analyze', {
+    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'register',
-        product: {
-          name: productName,
-          sku: sku,
-          brand: document.getElementById('f-brand').value,
-          category: document.getElementById('f-category').value,
-          store: document.getElementById('f-store').value,
-          price: price,
-          date: document.getElementById('f-date').value || new Date().toISOString().split('T')[0],
-          memo: memo
-        },
-        inventory: {
-          name: `${sku}_${color.replace(/ /g,'-')}_${document.getElementById('f-size').value}`,
-          color: color,
-          size: document.getElementById('f-size').value,
-          stock: parseInt(document.getElementById('f-stock').value) || 0
-        }
-      })
+      headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sorts: [{ timestamp: 'created_time', direction: 'descending' }], page_size: 50 })
     });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || '登録失敗');
-
-    document.getElementById('step3').style.display = 'none';
-    document.getElementById('step4').style.display = 'block';
-    document.getElementById('done-message').textContent = productName + ' を登録しました';
-    document.getElementById('done-detail').innerHTML = `
-      参考価格: <b style="color:var(--gold)">¥${Math.round(price * 190).toLocaleString()}</b><br>
-      Notionページ: <a href="${data.productUrl}" target="_blank" style="color:var(--gold)">開く →</a>
-    `;
-
-  } catch (e) {
-    const errEl = document.getElementById('register-error');
-    errEl.textContent = '登録に失敗しました: ' + e.message;
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = '✅ Notionに登録する';
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    products[currentBrand] = data.results || [];
+    renderProductList();
+  } catch(e) {
+    renderProductList();
   }
 }
 
-// ── Reset ──
-function resetApp() {
-  uploadedImages = [];
-  extractedData = {};
-  document.getElementById('preview-grid').innerHTML = '';
-  document.getElementById('preview-grid').style.display = 'none';
-  document.getElementById('analyze-section').style.display = 'none';
-  const camInput = document.getElementById('file-input-camera');
-  const libInput = document.getElementById('file-input-library');
-  if (camInput) camInput.value = '';
-  if (libInput) libInput.value = '';
-  document.getElementById('register-error').style.display = 'none';
-  document.getElementById('register-success').style.display = 'none';
-  document.getElementById('register-btn').disabled = false;
-  document.getElementById('register-btn').textContent = '✅ Notionに登録する';
+function renderProductList() {
+  const list = document.getElementById('product-list');
+  const items = products[currentBrand] || [];
+  document.getElementById('stat-total').textContent = items.length;
+  const warns = items.filter(p => {
+    const sell = p.properties?.['販売価格JPY']?.number || 0;
+    const c1 = p.properties?.['競合1価格JPY']?.number || 0;
+    return sell > 0 && c1 > 0 && sell > c1;
+  }).length;
+  document.getElementById('stat-warn').textContent = warns;
 
-  fillForm({});
-  document.getElementById('f-stock').value = '0';
-  document.getElementById('price-preview').style.display = 'none';
-
-  document.getElementById('step1').style.display = 'block';
-  document.getElementById('step2').style.display = 'none';
-  document.getElementById('step3').style.display = 'none';
-  document.getElementById('step4').style.display = 'none';
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">まだ商品が登録されていません</div></div>`;
+    return;
+  }
+  list.innerHTML = items.map(p => {
+    const name = p.properties?.['商品名']?.title?.[0]?.plain_text || '—';
+    const t1 = p.properties?.['型式1']?.rich_text?.[0]?.plain_text || '';
+    const model = p.properties?.['モデル']?.rich_text?.[0]?.plain_text || '';
+    const buyEur = p.properties?.['買付価格EUR']?.number;
+    const sellJpy = p.properties?.['販売価格JPY']?.number;
+    const c1 = p.properties?.['競合1価格JPY']?.number;
+    let badge = '';
+    if (sellJpy && c1) {
+      badge = sellJpy <= c1
+        ? '<span class="product-badge badge-ok">✅ 最安値</span>'
+        : '<span class="product-badge badge-warn">⚠️ 要確認</span>';
+    }
+    return `<div class="product-card" onclick="openDetail('${p.id}')">
+      <div class="product-thumb">📦</div>
+      <div class="product-info">
+        <div class="product-name">${name}</div>
+        <div class="product-meta">${[t1, model].filter(Boolean).join(' · ')}</div>
+        <div class="product-price">${buyEur ? '€' + buyEur : '—'} ${sellJpy ? '/ ¥' + sellJpy.toLocaleString() : ''}</div>
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
 }
 
+function openDetail(id) {
+  const items = products[currentBrand] || [];
+  const p = items.find(x => x.id === id);
+  if (!p) return;
+  editingProductId = id;
+  const props = p.properties;
+  const get = (key, type='text') => {
+    if (!props[key]) return '—';
+    if (type === 'title') return props[key].title?.[0]?.plain_text || '—';
+    if (type === 'text') return props[key].rich_text?.[0]?.plain_text || '—';
+    if (type === 'number') return props[key].number != null ? props[key].number : '—';
+    if (type === 'url') return props[key].url || '—';
+    if (type === 'ms') return props[key].multi_select?.map(s=>s.name).join(', ') || '—';
+    if (type === 'formula') return props[key].formula?.number || props[key].formula?.string || '—';
+    return '—';
+  };
+  document.getElementById('detail-brand-label').textContent = currentBrand;
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-images">
+      <div class="detail-img-main">📦</div>
+      <div class="detail-img-sub">
+        <div class="detail-img-thumb">🏷️</div>
+        <div class="detail-img-thumb"></div>
+      </div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-card-title">型式情報</div>
+      <div class="detail-row"><span class="detail-key">型式1</span><span class="detail-val">${get('型式1')}</span></div>
+      <div class="detail-row"><span class="detail-key">型式2</span><span class="detail-val">${get('型式2')}</span></div>
+      <div class="detail-row"><span class="detail-key">型式3</span><span class="detail-val">${get('型式3')}</span></div>
+      <div class="detail-row"><span class="detail-key">モデル</span><span class="detail-val">${get('モデル')}</span></div>
+      <div class="detail-row"><span class="detail-key">カテゴリ</span><span class="detail-val">${get('カテゴリ') !== '—' ? 'あり' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">サイズ展開</span><span class="detail-val">${get('サイズ展開','ms')}</span></div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-card-title">価格情報</div>
+      <div class="detail-row"><span class="detail-key">買付価格</span><span class="detail-val gold">€${get('買付価格EUR','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">販売価格</span><span class="detail-val">¥${typeof get('販売価格JPY','number') === 'number' ? get('販売価格JPY','number').toLocaleString() : '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">参考価格EUR</span><span class="detail-val">€${get('参考価格EUR','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">参考価格JPY</span><span class="detail-val">${get('参考価格JPY','formula')}</span></div>
+      <div class="detail-row"><span class="detail-key">利益（概算）</span><span class="detail-val green">${get('利益','formula')}</span></div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-card-title">競合情報</div>
+      <div class="detail-row"><span class="detail-key">競合1</span><span class="detail-val">¥${get('競合1価格JPY','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">競合2</span><span class="detail-val">¥${get('競合2価格JPY','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">競合3</span><span class="detail-val">¥${get('競合3価格JPY','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">競合4</span><span class="detail-val">¥${get('競合4価格JPY','number')}</span></div>
+      <div class="detail-row"><span class="detail-key">競合5</span><span class="detail-val">¥${get('競合5価格JPY','number')}</span></div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-card-title">その他</div>
+      <div class="detail-row"><span class="detail-key">箱サイズ</span><span class="detail-val">${get('箱サイズ') !== '—' ? 'あり' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">MEMO</span><span class="detail-val">${get('MEMO')}</span></div>
+      <div class="detail-row"><span class="detail-key">BUYMA出品URL</span><span class="detail-val">${get('BUYMA出品URL','url') !== '—' ? '<a href="'+get('BUYMA出品URL','url')+'" target="_blank" style="color:var(--blue)">開く</a>' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">登録日</span><span class="detail-val">${p.created_time ? new Date(p.created_time).toLocaleDateString('ja-JP') : '—'}</span></div>
+    </div>
+  `;
+  showScreen('detail');
+}
 
+function startEdit() {
+  const items = products[currentBrand] || [];
+  const p = items.find(x => x.id === editingProductId);
+  if (!p) return;
+  const props = p.properties;
+  const getT = (key) => props[key]?.rich_text?.[0]?.plain_text || '';
+  const getN = (key) => props[key]?.number || '';
+  resetForm();
+  document.getElementById('register-title').textContent = '編集 — ' + currentBrand;
+  document.getElementById('input-type1').value = getT('型式1');
+  document.getElementById('input-type2').value = getT('型式2');
+  document.getElementById('input-type3').value = getT('型式3');
+  document.getElementById('input-model').value = getT('モデル');
+  document.getElementById('input-buy-eur').value = getN('買付価格EUR');
+  document.getElementById('input-sell-jpy').value = getN('販売価格JPY');
+  document.getElementById('input-ref-eur').value = getN('参考価格EUR');
+  document.getElementById('input-buyma-url').value = props['BUYMA出品URL']?.url || '';
+  document.getElementById('input-memo').value = getT('MEMO');
+  const sizes = props['サイズ展開']?.multi_select?.map(s => s.name) || [];
+  document.querySelectorAll('.size-btn').forEach(b => {
+    if (sizes.includes(b.textContent)) b.classList.add('selected');
+  });
+  updateCalc();
+  showScreen('register');
+  goToStep(1);
+}
+
+// ===== LOADING / TOAST =====
+function showLoading(text) {
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading').classList.add('active');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('active'); }
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===== INIT =====
+loadSettings();
+loadTypeMaster();
+loadProductList();
 </script>
 </body>
 </html>
