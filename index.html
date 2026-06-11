@@ -509,6 +509,69 @@ body {
 .bulk-delete { flex: 2; background: var(--red); color: var(--white); }
 .bulk-cancel { flex: 0.6; background: var(--charcoal-light); color: var(--white); }
 
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  cursor: zoom-out;
+}
+.lightbox.active { display: flex; }
+.lightbox img { max-width: 95vw; max-height: 92vh; object-fit: contain; border-radius: 8px; }
+.lightbox-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px; height: 40px;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.product-memo {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.product-memo:hover { color: var(--gold); }
+
+/* MEMO edit modal */
+.memo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(28,28,28,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 350;
+  padding: 20px;
+}
+.memo-modal.active { display: flex; }
+.memo-modal-box {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 18px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-md);
+}
+.memo-modal-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.memo-modal-actions { display: flex; gap: 8px; margin-top: 12px; }
+.memo-modal-actions button {
+  flex: 1; padding: 11px; border-radius: 8px; border: none;
+  font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+
 /* Mode selector */
 .mode-grid {
   display: grid;
@@ -1038,6 +1101,23 @@ body {
 
     <!-- Step 2: 型式 -->
     <div class="form-section" id="section-2">
+      <div class="input-row">
+        <div class="form-group">
+          <div class="form-label">買付店舗</div>
+          <select class="form-select" id="input-store" onchange="updateProductNamePreview()">
+            <option value="OUT">OUT</option>
+            <option value="SER">SER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">性別</div>
+          <select class="form-select" id="input-gender" onchange="updateProductNamePreview()">
+            <option value="WOMEN">WOMEN</option>
+            <option value="MEN">MEN</option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-group">
         <div class="form-label">型式1<span class="required">*</span></div>
         <div class="type-input-wrap">
@@ -1307,6 +1387,24 @@ body {
   </div>
 </div>
 
+<!-- MEMO edit modal -->
+<div class="memo-modal" id="memo-modal">
+  <div class="memo-modal-box">
+    <div class="memo-modal-title">📝 MEMO編集<span id="memo-modal-product" style="font-weight:400;color:var(--muted);font-size:12px;"></span></div>
+    <textarea class="form-textarea" id="memo-modal-text" placeholder="サイズ・備考など" style="min-height:100px;"></textarea>
+    <div class="memo-modal-actions">
+      <button style="background:var(--cream-dark);color:var(--charcoal);" onclick="closeMemoModal()">キャンセル</button>
+      <button style="background:var(--gold);color:white;" onclick="saveMemoModal()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+</div>
+
 <!-- Bulk action bar -->
 <div class="bulk-bar" id="bulk-bar">
   <button class="bulk-btn bulk-archive" onclick="bulkArchive()">🗂 アーカイブ <span id="bulk-count-a">(0)</span></button>
@@ -1336,6 +1434,59 @@ let products = { PRADA: [], 'MIU MIU': [] };
 let aiExtracted = {};
 let editingProductId = null;
 let labelQrData = [];
+let existingProductFiles = [];  // 編集時の既存画像（Notionのfileオブジェクト）
+let existingLabelFiles = [];
+let imagesChanged = false;
+
+// 画像を圧縮（最大1600px・JPEG80%）してアップロードサイズを抑える
+function compressImage(dataUrl, maxSide = 1600, quality = 0.8) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+// Notionに画像をアップロードして file_upload ID を取得
+async function uploadImageToNotion(dataUrl, filename) {
+  const compressed = await compressImage(dataUrl);
+  const res = await fetch('/api/notion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'upload_file',
+      filename,
+      contentType: 'image/jpeg',
+      base64: compressed.split(',')[1],
+      token: getSetting('notion') || undefined
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '画像アップロード失敗');
+  return data.id;
+}
+
+// Notionのfileオブジェクトから表示URLを取得
+function fileUrl(f) { return f?.file?.url || f?.external?.url || ''; }
+
+// ===== ライトボックス（拡大表示） =====
+function openLightbox(url, event) {
+  if (event) event.stopPropagation();
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = url;
+  lb.classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
 
 // ラベル画像からQRコードをデコード（jsQR使用）
 function decodeQrFromImage(dataUrl) {
@@ -1467,6 +1618,7 @@ function startRegister() {
 
 function resetForm() {
   productImages = []; labelImages = []; aiExtracted = {}; editingProductId = null; labelQrData = [];
+  existingProductFiles = []; existingLabelFiles = []; imagesChanged = false;
   document.getElementById('product-img-preview').innerHTML = '';
   document.getElementById('label-img-preview').innerHTML = '';
   document.getElementById('ai-result').classList.remove('visible');
@@ -1486,6 +1638,8 @@ function resetForm() {
   document.getElementById('rev-result').textContent = '販売価格JPY: —';
   document.getElementById('input-category').value = '';
   document.getElementById('input-box-size').value = '';
+  document.getElementById('input-store').value = 'OUT';
+  document.getElementById('input-gender').value = 'WOMEN';
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('product-name-preview').textContent = '型式と価格を入力すると自動生成されます';
   document.getElementById('buyma-url-preview').style.display = 'none';
@@ -1532,6 +1686,7 @@ function handleImages(event, type) {
     const reader = new FileReader();
     reader.onload = e => {
       arr.push({ file, dataUrl: e.target.result });
+      imagesChanged = true;
       const item = document.createElement('div');
       item.className = 'preview-item';
       const idx = arr.length - 1;
@@ -1557,6 +1712,7 @@ function removeImage(type, idx, el) {
   const arr = type === 'product' ? productImages : labelImages;
   arr.splice(idx, 1);
   el.remove();
+  imagesChanged = true;
   if (type === 'label' && labelImages.length === 0) {
     document.getElementById('btn-ai-read').disabled = true;
   }
@@ -1962,6 +2118,10 @@ async function submitProduct() {
       properties['箱サイズ名'] = { 'select': { 'name': boxSize } };
       localStorage.setItem('mg_last-box', boxSize);
     }
+    const store = document.getElementById('input-store').value;
+    const gender = document.getElementById('input-gender').value;
+    if (store) properties['買付店舗'] = { 'select': { 'name': store } };
+    if (gender) properties['性別'] = { 'select': { 'name': gender } };
     // 価格変更があった場合は要価格更新フラグON
     if (priceChanged) properties['要価格更新'] = { 'checkbox': true };
 
@@ -1978,6 +2138,41 @@ async function submitProduct() {
     } catch(e) {}
     const hasColorVariants = colorSiblings.length > 0;
     properties['色展開あり'] = { 'checkbox': hasColorVariants };
+
+    // ===== 画像アップロード =====
+    // 新規追加分をNotionにアップロードし、既存（削除されていないもの）と結合
+    if (imagesChanged || productImages.length || labelImages.length) {
+      const totalNew = productImages.length + labelImages.length;
+      let uploaded = 0;
+      const uploadAll = async (imgs, prefix) => {
+        const ids = [];
+        for (const img of imgs) {
+          document.getElementById('loading-text').textContent = `画像アップロード中... (${++uploaded}/${totalNew})`;
+          const id = await uploadImageToNotion(img.dataUrl, `${prefix}_${Date.now()}_${ids.length}.jpg`);
+          ids.push(id);
+        }
+        return ids;
+      };
+      if (totalNew > 0) document.getElementById('loading-text').textContent = `画像アップロード中... (0/${totalNew})`;
+      const newProductIds = await uploadAll(productImages, t1 + '_product');
+      const newLabelIds = await uploadAll(labelImages, t1 + '_label');
+
+      const sanitizeExisting = f => {
+        if (f.type === 'external') return { name: f.name || 'image', type: 'external', external: { url: f.external.url } };
+        return { name: f.name || 'image.jpg', type: 'file', file: { url: f.file.url, expiry_time: f.file.expiry_time } };
+      };
+      const buildFiles = (existing, newIds, namePrefix) => [
+        ...existing.map(sanitizeExisting),
+        ...newIds.map((id, i) => ({ name: `${namePrefix}_${i + 1}.jpg`, type: 'file_upload', file_upload: { id } }))
+      ];
+      if (imagesChanged || newProductIds.length) {
+        properties['商品画像'] = { 'files': buildFiles(existingProductFiles, newProductIds, '商品画像') };
+      }
+      if (imagesChanged || newLabelIds.length) {
+        properties['ラベル画像'] = { 'files': buildFiles(existingLabelFiles, newLabelIds, 'ラベル画像') };
+      }
+      document.getElementById('loading-text').textContent = editingProductId ? '上書き登録中...' : 'Notionに登録中...';
+    }
 
     let result;
     if (editingProductId) {
@@ -2065,6 +2260,39 @@ function getMinCompetitor(props) {
     .map(i => props?.['競合' + i + '価格JPY']?.number)
     .filter(v => typeof v === 'number' && v > 0);
   return vals.length ? Math.min(...vals) : null;
+}
+
+// ===== MEMO編集モーダル =====
+let memoEditingId = null;
+function openMemoModal(id, event) {
+  if (event) event.stopPropagation();
+  const p = (products[currentBrand] || []).find(x => x.id === id);
+  if (!p) return;
+  memoEditingId = id;
+  document.getElementById('memo-modal-product').textContent = ' — ' + (p.properties?.['商品名']?.title?.[0]?.plain_text || '');
+  document.getElementById('memo-modal-text').value = p.properties?.['MEMO']?.rich_text?.[0]?.plain_text || '';
+  document.getElementById('memo-modal').classList.add('active');
+}
+function closeMemoModal() {
+  document.getElementById('memo-modal').classList.remove('active');
+  memoEditingId = null;
+}
+async function saveMemoModal() {
+  if (!memoEditingId) return;
+  const text = document.getElementById('memo-modal-text').value.trim();
+  showLoading('MEMOを保存中...');
+  try {
+    await notionFetch(`pages/${memoEditingId}`, 'PATCH', {
+      properties: { 'MEMO': { 'rich_text': text ? [{ 'text': { 'content': text } }] : [] } }
+    });
+    hideLoading();
+    closeMemoModal();
+    showToast('📝 MEMOを保存しました', 'success');
+    await loadProductList();
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: ' + e.message, 'error');
+  }
 }
 
 // ===== 一括選択モード =====
@@ -2220,6 +2448,9 @@ function renderProductList() {
     const sellJpy = p.properties?.['販売価格JPY']?.number;
     const needsUpdate = p.properties?.['要価格更新']?.checkbox === true;
     const hasColors = p.properties?.['色展開あり']?.checkbox === true;
+    const store = p.properties?.['買付店舗']?.select?.name || '';
+    const gender = p.properties?.['性別']?.select?.name || '';
+    const metaParts = [t1, model, [store, gender].filter(Boolean).join('/')].filter(Boolean);
     const minC = getMinCompetitor(p.properties);
     const losing = sellJpy > 0 && minC !== null && sellJpy > minC;
     let badge = '';
@@ -2229,13 +2460,19 @@ function renderProductList() {
     let priceHtml = outlet ? '€' + outlet : '—';
     if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
     if (sellJpy) priceHtml += ' / ¥' + sellJpy.toLocaleString();
+    const memo = p.properties?.['MEMO']?.rich_text?.[0]?.plain_text || '';
+    const imgUrl = fileUrl(p.properties?.['商品画像']?.files?.[0]);
+    const thumbHtml = imgUrl
+      ? `<div class="product-thumb" onclick="openLightbox('${imgUrl.replace(/'/g, "\\'")}', event)"><img src="${imgUrl}" loading="lazy"></div>`
+      : '<div class="product-thumb">📦</div>';
     return `<div class="product-card${selectionMode ? ' selectable' : ''}${selectedIds.has(p.id) ? ' selected' : ''}" style="${selectionMode ? 'user-select:none;' : ''}" onclick="${selectionMode ? `toggleSelect(event,'${p.id}',${idx})` : `openDetail('${p.id}')`}">
       ${selectionMode ? '<div class="select-check">✓</div>' : ''}
-      <div class="product-thumb">📦</div>
+      ${thumbHtml}
       <div class="product-info">
         <div class="product-name">${name}</div>
-        <div class="product-meta">${[t1, model].filter(Boolean).join(' · ')}</div>
+        <div class="product-meta">${metaParts.join(' · ')}</div>
         <div class="product-price">${priceHtml}</div>
+        <div class="product-memo" onclick="openMemoModal('${p.id}', event)">📝 ${memo ? memo.length > 40 ? memo.slice(0,40) + '…' : memo : '<span style="color:var(--border)">MEMOを追加</span>'}</div>
         ${badge}
       </div>
     </div>`;
@@ -2269,7 +2506,15 @@ function openDetail(id) {
   const siblings = hasColors ? (products[currentBrand] || []).filter(x =>
     x.id !== p.id && (x.properties?.['色展開キー']?.rich_text?.[0]?.plain_text || '') === colorKey
   ) : [];
+  const productFiles = props['商品画像']?.files || [];
+  const labelFiles = props['ラベル画像']?.files || [];
+  const galleryHtml = (productFiles.length || labelFiles.length) ? `
+    <div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;-webkit-overflow-scrolling:touch;">
+      ${productFiles.map(f => `<img src="${fileUrl(f)}" style="height:110px;border-radius:10px;cursor:zoom-in;flex-shrink:0;" onclick="openLightbox('${fileUrl(f).replace(/'/g, "\\'")}')">`).join('')}
+      ${labelFiles.map(f => `<img src="${fileUrl(f)}" style="height:110px;border-radius:10px;cursor:zoom-in;flex-shrink:0;border:2px solid var(--gold-pale);" onclick="openLightbox('${fileUrl(f).replace(/'/g, "\\'")}')">`).join('')}
+    </div>` : '';
   document.getElementById('detail-body').innerHTML = `
+    ${galleryHtml}
     ${needsUpdate ? `
     <div style="background:var(--red-pale);border:1.5px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
       <div style="font-weight:700;color:var(--red);font-size:14px;margin-bottom:8px;">⚠️ 価格変更あり — BUYMA出品価格の更新が必要です</div>
@@ -2281,7 +2526,11 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">型式2</span><span class="detail-val">${get('型式2')}</span></div>
       <div class="detail-row"><span class="detail-key">型式3</span><span class="detail-val">${get('型式3')}</span></div>
       <div class="detail-row"><span class="detail-key">モデル</span><span class="detail-val">${get('モデル')}</span></div>
+      <div class="detail-row"><span class="detail-key">買付店舗 / 性別</span><span class="detail-val">${props['買付店舗']?.select?.name || '—'} / ${props['性別']?.select?.name || '—'}</span></div>
       <div class="detail-row"><span class="detail-key">サイズ展開</span><span class="detail-val">${get('サイズ展開','ms')}</span></div>
+      <div style="padding:10px 16px;">
+        <button onclick="startEdit(2)" style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">✏️ 型式情報を編集</button>
+      </div>
     </div>
     ${hasColors && siblings.length ? `
     <div class="detail-card">
@@ -2400,13 +2649,45 @@ function startEdit(targetStep = 1) {
   // 箱サイズ：商品に保存されたもの > 最後に選択したもの
   const savedBox = props['箱サイズ名']?.select?.name || localStorage.getItem('mg_last-box') || '';
   if (savedBox) document.getElementById('input-box-size').value = savedBox;
+  document.getElementById('input-store').value = props['買付店舗']?.select?.name || 'OUT';
+  document.getElementById('input-gender').value = props['性別']?.select?.name || 'WOMEN';
   const sizes = props['サイズ展開']?.multi_select?.map(s => s.name) || [];
   document.querySelectorAll('.size-btn').forEach(b => {
     if (sizes.includes(b.textContent)) b.classList.add('selected');
   });
+  // 既存画像を編集フォームに読み込み（×で削除可能）
+  existingProductFiles = (props['商品画像']?.files || []).slice();
+  existingLabelFiles = (props['ラベル画像']?.files || []).slice();
+  imagesChanged = false;
+  renderExistingImages();
+  if (existingLabelFiles.length) document.getElementById('label-add-row').style.display = 'flex';
   updateCalc();
   showScreen('register');
   goToStep(targetStep);
+}
+
+// 既存画像のプレビュー描画（編集時）
+function renderExistingImages() {
+  ['product', 'label'].forEach(type => {
+    const arr = type === 'product' ? existingProductFiles : existingLabelFiles;
+    const previewEl = document.getElementById(type + '-img-preview');
+    // 既存分のみ再描画（新規分はhandleImagesで追記されるため、既存プレビューを先頭に再構築）
+    previewEl.querySelectorAll('.preview-existing').forEach(el => el.remove());
+    arr.forEach((f, i) => {
+      const url = fileUrl(f);
+      const item = document.createElement('div');
+      item.className = 'preview-item preview-existing';
+      item.innerHTML = `<img src="${url}" onclick="openLightbox('${url.replace(/'/g, "\\'")}')"><button class="preview-remove" onclick="removeExistingImage('${type}',${i})">×</button>`;
+      previewEl.insertBefore(item, previewEl.firstChild);
+    });
+  });
+}
+function removeExistingImage(type, idx) {
+  const arr = type === 'product' ? existingProductFiles : existingLabelFiles;
+  arr.splice(idx, 1);
+  imagesChanged = true;
+  renderExistingImages();
+  showToast('画像を削除対象にしました（保存時に反映）');
 }
 
 // ===== LOADING / TOAST =====
