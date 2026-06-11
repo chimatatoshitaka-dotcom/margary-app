@@ -70,6 +70,7 @@ export default async function handler(req, res) {
   try {
     const { action } = req.body;
     const token = await getAccessToken();
+    const rootHeader = await pathRootHeader(token);
 
     // ===== 画像をアップロード =====
     if (action === 'upload') {
@@ -82,6 +83,7 @@ export default async function handler(req, res) {
           'Authorization': 'Bearer ' + token,
           'Content-Type': 'application/octet-stream',
           'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', autorename: false, mute: true }),
+          ...rootHeader,
         },
         body: buffer,
       });
@@ -97,7 +99,7 @@ export default async function handler(req, res) {
       // 既存リンクを探す
       let linkRes = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...rootHeader },
         body: JSON.stringify({ path, direct_only: true }),
       });
       let linkData = await linkRes.json();
@@ -107,7 +109,7 @@ export default async function handler(req, res) {
       // なければ新規作成
       linkRes = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...rootHeader },
         body: JSON.stringify({ path }),
       });
       linkData = await linkRes.json();
@@ -121,7 +123,7 @@ export default async function handler(req, res) {
       if (!from_path || !to_path) return res.status(400).json({ message: 'from_path and to_path are required' });
       const mvRes = await fetch('https://api.dropboxapi.com/2/files/move_v2', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...rootHeader },
         body: JSON.stringify({ from_path, to_path, autorename: false, allow_ownership_transfer: false }),
       });
       const mvData = await mvRes.json();
@@ -130,6 +132,12 @@ export default async function handler(req, res) {
         return res.status(mvRes.status).json({ message: 'フォルダ移動失敗: ' + JSON.stringify(mvData) });
       }
       return res.status(200).json({ ok: true, path: mvData.metadata?.path_display });
+    }
+
+    // ===== デバッグ：ルート名前空間IDを確認 =====
+    if (action === 'debug') {
+      const ns = await getRootNamespaceId(token);
+      return res.status(200).json({ root_namespace_id: ns, has_root_header: !!ns });
     }
 
     return res.status(400).json({ message: 'Unknown action: ' + action });
