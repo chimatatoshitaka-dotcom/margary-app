@@ -204,6 +204,7 @@ body {
 }
 .badge-ok { background: var(--green-pale); color: var(--green); }
 .badge-warn { background: var(--red-pale); color: var(--red); }
+.badge-color { background: #F3E8FF; color: #7C3AED; }
 .badge-none { background: var(--cream-dark); color: var(--muted); }
 
 .empty-state {
@@ -346,6 +347,48 @@ body {
   gap: 6px;
 }
 .suggestion-new:hover { background: var(--gold-pale); }
+
+/* Simulation card */
+.sim-card {
+  background: var(--white);
+  border: 1.5px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.sim-title { font-size: 13px; font-weight: 700; color: var(--charcoal); margin-bottom: 10px; }
+.sim-mode-toggle { display: flex; gap: 6px; margin-bottom: 14px; background: var(--cream); border-radius: var(--radius-sm); padding: 4px; }
+.sim-mode-btn {
+  flex: 1;
+  padding: 9px 4px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.sim-mode-btn.active { background: var(--charcoal); color: var(--white); }
+.sim-body { margin-bottom: 12px; }
+.sim-result-price {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--gold-pale);
+  border-radius: var(--radius-sm);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gold);
+  text-align: center;
+}
+.profit-rows { border-top: 1px solid var(--cream-dark); padding-top: 10px; }
+.profit-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+.profit-key { font-size: 12px; color: var(--muted); }
+.profit-val { font-size: 15px; font-weight: 700; color: var(--charcoal); }
+.profit-val.profit-main { font-size: 18px; }
+.profit-detail { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
 
 /* Final price styling */
 .input-final { border-color: var(--red) !important; color: var(--red); font-weight: 700; }
@@ -725,7 +768,7 @@ body {
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: 80px; left: 16px; right: 16px;
+  bottom: 110px; left: 16px; right: 16px;
   background: var(--charcoal);
   color: var(--white);
   padding: 14px 16px;
@@ -733,11 +776,13 @@ body {
   font-size: 14px;
   font-weight: 600;
   z-index: 300;
-  transform: translateY(120%);
+  transform: translateY(150%);
   transition: transform 0.25s ease;
   display: flex;
   align-items: center;
   gap: 8px;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
 }
 .toast.show { transform: translateY(0); }
 .toast.success { background: var(--green); }
@@ -973,38 +1018,64 @@ body {
         </div>
       </div>
 
-      <div class="input-row">
-        <div class="form-group">
-          <div class="form-label">販売価格JPY</div>
-          <input class="form-input" id="input-sell-jpy" type="number" placeholder="0" oninput="updateCalc()">
-        </div>
-        <div class="form-group">
-          <div class="form-label">参考価格JPY<span class="optional">MSFRP×190</span></div>
-          <input class="form-input" id="input-ref-jpy" type="number" placeholder="自動計算" readonly style="background:var(--cream-dark);color:var(--muted)">
-        </div>
-      </div>
-
       <div class="form-group">
-        <div class="form-label">利益（概算）</div>
-        <div id="calc-profit" style="padding:12px 13px;background:var(--cream-dark);border-radius:var(--radius-sm);font-size:16px;font-weight:700;color:var(--muted);">
-          — 円
-        </div>
-      </div>
-
-      <div class="form-group">
-        <div class="form-label">箱サイズ</div>
-        <select class="form-select" id="input-box-size">
+        <div class="form-label">箱サイズ<span class="optional">送料が利益計算に反映</span></div>
+        <select class="form-select" id="input-box-size" onchange="updateCalc()">
           <option value="">選択してください</option>
-          <option value="ACCESORIO">ACCESORIO（26×16×6 cm｜€20.76）</option>
-          <option value="MINI">MINI（26×20×9 cm｜€20.76）</option>
-          <option value="PEQUENA">PEQUENA（26×22×11 cm｜€31.10）</option>
-          <option value="BAJITA">BAJITA（29×24×9 cm｜€31.10）</option>
-          <option value="CORREO">CORREO（36×24×14 cm｜€31.61）</option>
-          <option value="MONCLER">MONCLER（44×32×13 cm｜€43.45）</option>
-          <option value="MONCLER ALTA">MONCLER ALTA（44×32×19 cm｜€60.76）</option>
-          <option value="NEWROCK">NEWROCK（44×32×19 cm｜€60.76）</option>
-          <option value="OTRO">OTRO（50×50×50 cm｜€100）</option>
+          <option value="ACCESORIO" data-envio="20.76">ACCESORIO（26×16×6 cm｜€20.76）</option>
+          <option value="MINI" data-envio="20.76">MINI（26×20×9 cm｜€20.76）</option>
+          <option value="PEQUENA" data-envio="31.10">PEQUENA（26×22×11 cm｜€31.10）</option>
+          <option value="BAJITA" data-envio="31.10">BAJITA（29×24×9 cm｜€31.10）</option>
+          <option value="CORREO" data-envio="31.61">CORREO（36×24×14 cm｜€31.61）</option>
+          <option value="MONCLER" data-envio="43.45">MONCLER（44×32×13 cm｜€43.45）</option>
+          <option value="MONCLER ALTA" data-envio="60.76">MONCLER ALTA（44×32×19 cm｜€60.76）</option>
+          <option value="NEWROCK" data-envio="60.76">NEWROCK（44×32×19 cm｜€60.76）</option>
+          <option value="OTRO" data-envio="100">OTRO（50×50×50 cm｜€100）</option>
         </select>
+      </div>
+
+      <!-- 価格シミュレーション -->
+      <div class="sim-card">
+        <div class="sim-title">💴 価格シミュレーション</div>
+        <div class="sim-mode-toggle">
+          <button class="sim-mode-btn active" id="mode-fwd" onclick="setSimMode('fwd')">販売価格 → 利益</button>
+          <button class="sim-mode-btn" id="mode-rev" onclick="setSimMode('rev')">利益 → 販売価格</button>
+        </div>
+
+        <!-- 順方向：販売価格入力 -->
+        <div id="sim-fwd" class="sim-body">
+          <div class="form-group">
+            <div class="form-label">販売価格JPY（出品価格）</div>
+            <input class="form-input" id="input-sell-jpy" type="number" placeholder="例：142900" oninput="updateCalc()">
+          </div>
+        </div>
+
+        <!-- 逆方向：利益入力 -->
+        <div id="sim-rev" class="sim-body" style="display:none">
+          <div class="form-group">
+            <div class="form-label">目標２次利益JPY<span class="optional">IVA還付・税引後</span></div>
+            <input class="form-input" id="input-target-profit" type="number" placeholder="例：30000" oninput="reverseCalc()">
+          </div>
+          <div class="sim-result-price" id="rev-result">販売価格JPY: —</div>
+        </div>
+
+        <!-- 利益表示（常時） -->
+        <div class="profit-rows">
+          <div class="profit-row">
+            <span class="profit-key">１次利益</span>
+            <span class="profit-val" id="profit-first">— 円</span>
+          </div>
+          <div class="profit-row">
+            <span class="profit-key">２次利益（IVA還付・税引後）</span>
+            <span class="profit-val profit-main" id="profit-second">— 円</span>
+          </div>
+          <div class="profit-detail" id="profit-detail"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">参考価格JPY<span class="optional">MSFRP×レート</span></div>
+        <input class="form-input" id="input-ref-jpy" type="number" placeholder="自動計算" readonly style="background:var(--cream-dark);color:var(--muted)">
       </div>
     </div>
 
@@ -1067,12 +1138,16 @@ body {
     <div class="section-title">API設定</div>
     <div class="settings-card">
       <div class="settings-row">
-        <div class="settings-key">Anthropic API Key</div>
-        <input class="settings-input" id="setting-anthropic" type="password" placeholder="sk-ant-...">
+        <div class="settings-key">為替レート（€1 = ¥）</div>
+        <input class="settings-input" id="setting-rate" type="number" step="0.1" placeholder="190" style="font-family:inherit;font-size:15px;font-weight:700">
       </div>
       <div class="settings-row">
-        <div class="settings-key">Notion Token</div>
-        <input class="settings-input" id="setting-notion" type="password" placeholder="secret_...">
+        <div class="settings-key">Anthropic API Key<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--border)">（Vercel設定済みなら空欄でOK）</span></div>
+        <input class="settings-input" id="setting-anthropic" type="password" placeholder="未入力＝サーバー設定を使用">
+      </div>
+      <div class="settings-row">
+        <div class="settings-key">Notion Token<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--border)">（Vercel設定済みなら空欄でOK）</span></div>
+        <input class="settings-input" id="setting-notion" type="password" placeholder="未入力＝サーバー設定を使用">
       </div>
     </div>
 
@@ -1106,8 +1181,10 @@ body {
     <button class="btn-save-settings" onclick="saveSettings()">💾 設定を保存</button>
 
     <div style="margin-top:32px;padding:16px;background:var(--cream-dark);border-radius:var(--radius);font-size:12px;color:var(--muted);">
-      <div style="font-weight:700;margin-bottom:6px;color:var(--charcoal)">DB IDは設定済みです</div>
-      NotionのDB IDはすでに上記に入力されています。Anthropic APIキーとNotionトークンを入力して保存してください。
+      <div style="font-weight:700;margin-bottom:6px;color:var(--charcoal)">🔑 トークンの再入力は不要です</div>
+      Vercelの環境変数に <b>ANTHROPIC_API_KEY</b> と <b>NOTION_TOKEN</b> を設定すれば、どの端末からでもトークン入力なしで使えます。<br><br>
+      <b>設定方法：</b>Vercelダッシュボード → プロジェクト → Settings → Environment Variables → NOTION_TOKEN を追加 → Redeploy<br><br>
+      上の入力欄は、サーバー設定を一時的に上書きしたい場合のみ使用してください。
     </div>
   </div>
 </div>
@@ -1144,13 +1221,14 @@ const DB_IDS = {
 
 // ===== SETTINGS =====
 function loadSettings() {
-  const keys = ['anthropic','notion','prada-db','miumiu-db','prada-type-db','miumiu-type-db','cat-db','box-db'];
+  const keys = ['rate','anthropic','notion','prada-db','miumiu-db','prada-type-db','miumiu-type-db','cat-db','box-db'];
   keys.forEach(k => {
     const el = document.getElementById('setting-' + k);
-    if (el) el.value = localStorage.getItem('mg_' + k) || el.placeholder || '';
+    if (el) el.value = localStorage.getItem('mg_' + k) || '';
   });
-  // Pre-fill DB IDs
+  // Pre-fill defaults
   const defaults = {
+    'rate': '190',
     'prada-db': DB_IDS.PRADA,
     'miumiu-db': DB_IDS['MIU MIU'],
     'prada-type-db': DB_IDS.PRADA_TYPE,
@@ -1165,7 +1243,7 @@ function loadSettings() {
   });
 }
 function saveSettings() {
-  const keys = ['anthropic','notion','prada-db','miumiu-db','prada-type-db','miumiu-type-db','cat-db','box-db'];
+  const keys = ['rate','anthropic','notion','prada-db','miumiu-db','prada-type-db','miumiu-type-db','cat-db','box-db'];
   keys.forEach(k => {
     const el = document.getElementById('setting-' + k);
     if (el && el.value) localStorage.setItem('mg_' + k, el.value);
@@ -1174,6 +1252,21 @@ function saveSettings() {
   setTimeout(() => showScreen('home'), 800);
 }
 function getSetting(k) { return localStorage.getItem('mg_' + k) || ''; }
+
+// ===== NOTION PROXY =====
+// Notion APIはCORS非対応のため、Vercelのサーバーレス関数(/api/notion)経由でアクセス
+// トークンはVercel環境変数 NOTION_TOKEN を優先（端末ごとの入力不要）
+async function notionFetch(path, method, body) {
+  const token = getSetting('notion') || undefined;
+  const res = await fetch('/api/notion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, method, body, token })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Notionエラー (' + res.status + ')');
+  return data;
+}
 
 // ===== NAVIGATION =====
 function showScreen(name) {
@@ -1210,12 +1303,17 @@ function resetForm() {
   document.getElementById('btn-ai-read').disabled = true;
   document.getElementById('label-add-row').style.display = 'none';
   ['input-type1','input-type2','input-type3','input-model','input-msfrp-eur','input-outlet-eur','input-final-eur',
-   'input-sell-jpy','input-ref-jpy','input-buyma-url','input-memo']
+   'input-sell-jpy','input-ref-jpy','input-buyma-url','input-memo','input-target-profit']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   priceSource = 'Outlet';
   document.getElementById('src-outlet').classList.add('active');
   document.getElementById('src-final').classList.remove('active');
   document.getElementById('price-source-group').style.display = 'none';
+  setSimMode('fwd');
+  document.getElementById('profit-first').textContent = '— 円';
+  document.getElementById('profit-second').textContent = '— 円';
+  document.getElementById('profit-detail').textContent = '';
+  document.getElementById('rev-result').textContent = '販売価格JPY: —';
   document.getElementById('input-category').value = '';
   document.getElementById('input-box-size').value = '';
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
@@ -1290,8 +1388,6 @@ function removeImage(type, idx, el) {
 
 // ===== AI LABEL READ =====
 async function aiReadLabel() {
-  const apiKey = getSetting('anthropic');
-  if (!apiKey) { showToast('APIキーを設定してください', 'error'); showScreen('settings'); return; }
   if (!labelImages.length) { showToast('ラベル画像を選択してください', 'error'); return; }
   showLoading('ラベルを読み取り中...');
   try {
@@ -1308,28 +1404,38 @@ async function aiReadLabel() {
       text: `これはPRADAまたはMIU MIUの商品タグです。以下のルールで情報を読み取り、JSONのみで返してください。
 
 【タグの構造】
-- ART. 欄 → 型式1（例：2CC537）
-- タグ下部に「型式1 コード2 コード3 数字 数字」形式の行があります（例：2CC537 2CYS F0002 005 01）
-- 型式2 = 下部行の2番目のコード + "_" + GROUP NAME欄の値（例：2CYS_SOFT GRAIN）
-- 型式3 = 下部行の3番目のコード + "_" + COLOUR欄の値（例：F0002_NERO）
-- モデル = 商品説明行（例：CINTURE IN PELLE。末尾のサイズ数字は除く）
-- サイズ = SIZE欄（例：80）
-- MSFRP = MSFRP欄の金額（EUR）
+- ART. 欄 → 型式1（例：2CC537、1BN026）
+- タグ下部に品番コードの行があります。パターン例：
+  「2CC537 2CYS F0002 005 01」
+  「1BN026 V OOO 2CYR F03SF 001 01」
+  ※「V OOO」のような中間コードが挟まる場合がありますが無視してください。
+- 【重要】型式3のコード = 「F」で始まるコード（例：F0002、F03SF）
+- 【重要】型式2のコード = Fコードの直前にあるコード（例：2CYS、2CYR）
+- 型式2 = 型式2コード + "_" + GROUP NAME欄の値（例：2CYR_SOFT LUX）
+- 型式3 = Fコード + "_" + COLOUR欄の値（例：F03SF_PELTRO N）
+- モデル = 商品説明行（例：CARTELLA IN PELLE。末尾のサイズ数字やカンマは除く）
+- サイズ = SIZE欄（例：80、TU。TUはワンサイズの意味）
+- MSFRP = MSFRP欄の金額（EUR、ヨーロッパ表記「3.400,00」は3400として読む）
 - Outlet price = Outlet price欄の金額（EUR）
 - Final Price = Final Price欄の金額（EUR、ない場合はnull）
 
 【返却JSON形式】
-{"type1":"2CC537","type2":"2CYS_SOFT GRAIN","type3":"F0002_NERO","model":"CINTURE IN PELLE","size":"80","msfrp":580,"outlet":290,"final":232}
+{"type1":"1BN026","type2":"2CYR_SOFT LUX","type3":"F03SF_PELTRO N","model":"CARTELLA IN PELLE","size":"TU","msfrp":3400,"outlet":1700,"final":null,"raw_line":"1BN026 V OOO 2CYR F03SF 001 01","confidence":"high"}
 
-Final Priceがタグにない場合は"final":nullとしてください。複数タグ画像がある場合は、最も情報が多い・価格が新しいものを優先してください。JSONのみ返してください。`
+- raw_line：タグ下部のコード行をそのまま記載
+- confidence：読み取りに自信がない項目がある場合は"low"、明瞭なら"high"
+- Final Priceがタグにない場合は"final":null
+- 複数タグ画像がある場合は、最も情報が多い・価格が新しいものを優先
+- JSONのみ返してください。`
     });
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/analyze', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 500,
-        messages: [{ role: 'user', content: imageContents }]
+        messages: [{ role: 'user', content: imageContents }],
+        apiKey: getSetting('anthropic') || undefined
       })
     });
     const data = await res.json();
@@ -1346,15 +1452,33 @@ Final Priceがタグにない場合は"final":nullとしてください。複数
     if (aiExtracted.outlet) document.getElementById('input-outlet-eur').value = aiExtracted.outlet;
     if (aiExtracted.final) document.getElementById('input-final-eur').value = aiExtracted.final;
     if (aiExtracted.size) {
+      // TU = ワンサイズ
+      const sizeLabel = String(aiExtracted.size).toUpperCase() === 'TU' ? 'ワンサイズ' : String(aiExtracted.size);
       document.querySelectorAll('.size-btn').forEach(b => {
-        if (b.textContent === String(aiExtracted.size)) b.classList.add('selected');
+        if (b.textContent === sizeLabel) b.classList.add('selected');
       });
     }
     updateCalc();
+    // 読み取り結果サマリー表示
+    const sizeDisp = aiExtracted.size ? (String(aiExtracted.size).toUpperCase() === 'TU' ? 'TU → ワンサイズ' : aiExtracted.size) : '—';
+    const confWarn = aiExtracted.confidence === 'low' ? '<div style="color:var(--red);font-weight:700;margin-bottom:6px;">⚠️ 読み取りに自信のない項目があります。必ず確認してください。</div>' : '';
+    document.getElementById('ai-result').innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px;">✅ 読み取り完了 — 内容を確認してください</div>
+      ${confWarn}
+      <table style="width:100%;font-size:12px;border-collapse:collapse;color:var(--charcoal)">
+        <tr><td style="color:var(--muted);padding:3px 0;width:78px;">モデル</td><td style="font-weight:600">${aiExtracted.model || '—'}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">型式1</td><td style="font-weight:600">${aiExtracted.type1 || '—'}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">型式2</td><td style="font-weight:600">${aiExtracted.type2 || '—'}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">型式3</td><td style="font-weight:600">${aiExtracted.type3 || '—'}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">サイズ</td><td style="font-weight:600">${sizeDisp}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">MSFRP</td><td style="font-weight:600">€${aiExtracted.msfrp ?? '—'}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">Outlet</td><td style="font-weight:600">€${aiExtracted.outlet ?? '—'}</td></tr>
+        <tr><td style="color:var(--muted);padding:3px 0;">Final</td><td style="font-weight:700;color:${aiExtracted.final ? 'var(--red)' : 'var(--muted)'}">${aiExtracted.final ? '€' + aiExtracted.final : 'なし'}</td></tr>
+        ${aiExtracted.raw_line ? `<tr><td style="color:var(--muted);padding:3px 0;">コード行</td><td style="font-family:monospace;font-size:11px;">${aiExtracted.raw_line}</td></tr>` : ''}
+      </table>`;
     document.getElementById('ai-result').classList.add('visible');
     hideLoading();
-    showToast('読み取り完了！内容を確認してください', 'success');
-    setTimeout(() => goToStep(2), 800);
+    showToast('読み取り完了！内容を確認して「次へ」を押してください', 'success');
   } catch(e) {
     hideLoading();
     showToast('読み取りエラー: ' + e.message, 'error');
@@ -1363,24 +1487,6 @@ Final Priceがタグにない場合は"final":nullとしてください。複数
 
 // ===== TYPE MASTER =====
 async function loadTypeMaster() {
-  const notionToken = getSetting('notion');
-  if (!notionToken) return;
-  const dbId = currentBrand === 'PRADA' ? getSetting('prada-type-db') : getSetting('miumiu-type-db');
-  if (!dbId) return;
-  try {
-    const res = await fetch(`https://api.anthropic.com/v1/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': getSetting('anthropic'), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: 'You are a helpful assistant. Return only valid JSON.',
-        messages: [{ role: 'user', content: `Notion API経由で型式マスタを取得します。DB ID: ${dbId}, Notion Token: ${notionToken}。型式コードの一覧を{"type1":[],"type2":[],"type3":[]}形式で返してください。取得できない場合は空配列で返してください。` }],
-        mcp_servers: [{ type: 'url', url: 'https://mcp.notion.com/mcp', name: 'notion-mcp', authorization_token: notionToken }]
-      })
-    });
-    // For now use locally stored masters
-  } catch(e) {}
   // Load from localStorage
   const stored = localStorage.getItem('mg_type_' + currentBrand);
   if (stored) typeMasters[currentBrand] = JSON.parse(stored);
@@ -1421,13 +1527,53 @@ function getSelectedSizes() {
 }
 
 // ===== CALC =====
+// Excelの「一括計算(TOSHI)」シートの計算式を再現
+// B=販売価格JPY, C=買付価格EUR, E=送料EUR, R=為替レート
+// D=C×R(買付JPY), F=E×R(送料JPY), G=B×5.5%(BUYMA手数料)
+// １次利益 H = B - D - F - G
+// J=D/1.21(税抜買付), K=J×0.21(IVA還付), L=(B-J-F-G)×25%(税金)
+// ２次利益 I = B + K - D - F - G - L
 let priceSource = 'Outlet';
+let simMode = 'fwd';
+const BUYMA_FEE = 0.055;
+const IVA = 1.21;
+const TAX = 0.25;
+
+function getRate() { return parseFloat(getSetting('rate')) || 190; }
+
+function calcProfits(B, C, E, R) {
+  const D = C * R, F = E * R, G = B * BUYMA_FEE;
+  const H = B - D - F - G;
+  const J = D / IVA, K = J * (IVA - 1);
+  const L = (B - J - F - G) * TAX;
+  const I = B + K - D - F - G - L;
+  return { first: H, second: I, D, F, G, K, L };
+}
+
+// 逆算：目標利益から販売価格Bを求める（利益はBに対して線形なので2点評価で解く）
+function solveSellPrice(targetProfit, base, C, E, R) {
+  const p0 = calcProfits(0, C, E, R)[base];
+  const p1 = calcProfits(100000, C, E, R)[base];
+  const slope = (p1 - p0) / 100000;
+  if (!slope) return 0;
+  const B = (targetProfit - p0) / slope;
+  return Math.ceil(B / 100) * 100; // 100円単位に切り上げ
+}
+
+function setSimMode(m) {
+  simMode = m;
+  document.getElementById('mode-fwd').classList.toggle('active', m === 'fwd');
+  document.getElementById('mode-rev').classList.toggle('active', m === 'rev');
+  document.getElementById('sim-fwd').style.display = m === 'fwd' ? 'block' : 'none';
+  document.getElementById('sim-rev').style.display = m === 'rev' ? 'block' : 'none';
+  if (m === 'rev') reverseCalc(); else updateCalc();
+}
 
 function setPriceSource(src) {
   priceSource = src;
   document.getElementById('src-outlet').classList.toggle('active', src === 'Outlet');
   document.getElementById('src-final').classList.toggle('active', src === 'Final');
-  updateCalc();
+  if (simMode === 'rev') reverseCalc(); else updateCalc();
 }
 
 function getBasePrice() {
@@ -1436,12 +1582,40 @@ function getBasePrice() {
   return priceSource === 'Final' && final ? final : outlet;
 }
 
+function getEnvio() {
+  const sel = document.getElementById('input-box-size');
+  const opt = sel.options[sel.selectedIndex];
+  return parseFloat(opt?.dataset?.envio) || 0;
+}
+
+function renderProfits(B) {
+  const C = getBasePrice();
+  const E = getEnvio();
+  const R = getRate();
+  const fEl = document.getElementById('profit-first');
+  const sEl = document.getElementById('profit-second');
+  const dEl = document.getElementById('profit-detail');
+  if (B > 0 && C > 0 && E > 0) {
+    const p = calcProfits(B, C, E, R);
+    fEl.textContent = (p.first >= 0 ? '+' : '') + Math.round(p.first).toLocaleString() + ' 円';
+    fEl.style.color = p.first >= 0 ? 'var(--green)' : 'var(--red)';
+    sEl.textContent = (p.second >= 0 ? '+' : '') + Math.round(p.second).toLocaleString() + ' 円';
+    sEl.style.color = p.second >= 0 ? 'var(--green)' : 'var(--red)';
+    dEl.innerHTML = `買付: ¥${Math.round(p.D).toLocaleString()}（€${C}×${R}・${priceSource}）｜送料: ¥${Math.round(p.F).toLocaleString()}（€${E}）｜BUYMA手数料: ¥${Math.round(p.G).toLocaleString()}<br>IVA還付: +¥${Math.round(p.K).toLocaleString()}｜税金(25%): −¥${Math.round(p.L).toLocaleString()}｜レート: €1=¥${R}`;
+  } else {
+    fEl.textContent = '— 円'; fEl.style.color = 'var(--charcoal)';
+    sEl.textContent = '— 円'; sEl.style.color = 'var(--charcoal)';
+    dEl.textContent = C > 0 && B > 0 ? '箱サイズを選択すると利益を計算します' : '';
+  }
+}
+
 function updateCalc() {
   const msfrp = parseFloat(document.getElementById('input-msfrp-eur').value) || 0;
   const final = parseFloat(document.getElementById('input-final-eur').value) || 0;
   const sellJpy = parseFloat(document.getElementById('input-sell-jpy').value) || 0;
+  const R = getRate();
 
-  // Show/hide price source toggle when Final exists
+  // Final Priceがある場合のみ算出元選択を表示
   const srcGroup = document.getElementById('price-source-group');
   if (final > 0) {
     srcGroup.style.display = 'block';
@@ -1452,17 +1626,26 @@ function updateCalc() {
     document.getElementById('src-final').classList.remove('active');
   }
 
-  if (msfrp) document.getElementById('input-ref-jpy').value = Math.round(msfrp * 190);
+  if (msfrp) document.getElementById('input-ref-jpy').value = Math.round(msfrp * R);
 
-  const base = getBasePrice();
-  const profit = sellJpy - (base * 190);
-  const el = document.getElementById('calc-profit');
-  if (sellJpy && base) {
-    el.textContent = (profit >= 0 ? '+' : '') + profit.toLocaleString() + ' 円（' + priceSource + '基準）';
-    el.style.color = profit >= 0 ? 'var(--green)' : 'var(--red)';
+  renderProfits(sellJpy);
+  updateProductNamePreview();
+}
+
+function reverseCalc() {
+  const target = parseFloat(document.getElementById('input-target-profit').value) || 0;
+  const C = getBasePrice();
+  const E = getEnvio();
+  const R = getRate();
+  const resEl = document.getElementById('rev-result');
+  if (target > 0 && C > 0 && E > 0) {
+    const B = solveSellPrice(target, 'second', C, E, R);
+    resEl.textContent = '販売価格JPY: ¥' + B.toLocaleString();
+    document.getElementById('input-sell-jpy').value = B;
+    renderProfits(B);
   } else {
-    el.textContent = '— 円';
-    el.style.color = 'var(--muted)';
+    resEl.textContent = E === 0 && target > 0 ? '箱サイズを選択してください' : '販売価格JPY: —';
+    renderProfits(0);
   }
   updateProductNamePreview();
 }
@@ -1491,23 +1674,17 @@ function generateBuymaUrl() {
 }
 
 // ===== SUBMIT =====
-async function findExistingProduct(dbId, notionToken, t1, t2, t3) {
+async function findExistingProduct(dbId, t1, t2, t3) {
   const filters = [{ property: '型式1', rich_text: { equals: t1 } }];
   if (t2) filters.push({ property: '型式2', rich_text: { equals: t2 } });
   if (t3) filters.push({ property: '型式3', rich_text: { equals: t3 } });
-  const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filter: { and: filters }, page_size: 1 })
-  });
-  const data = await res.json();
-  if (!res.ok) return null;
-  return data.results?.[0] || null;
+  try {
+    const data = await notionFetch(`databases/${dbId}/query`, 'POST', { filter: { and: filters }, page_size: 1 });
+    return data.results?.[0] || null;
+  } catch(e) { return null; }
 }
 
 async function submitProduct() {
-  const notionToken = getSetting('notion');
-  if (!notionToken) { showToast('Notionトークンを設定してください', 'error'); showScreen('settings'); return; }
   const dbId = currentBrand === 'PRADA' ? getSetting('prada-db') : getSetting('miumiu-db');
   const t1 = document.getElementById('input-type1').value.trim();
   if (!t1) { showToast('型式1は必須です', 'error'); goToStep(2); return; }
@@ -1534,7 +1711,7 @@ async function submitProduct() {
   // ===== 重複チェック =====
   let existing = null;
   try {
-    existing = await findExistingProduct(dbId, notionToken, t1, t2, t3);
+    existing = await findExistingProduct(dbId, t1, t2, t3);
   } catch(e) {}
 
   let priceChanged = false;
@@ -1586,38 +1763,56 @@ async function submitProduct() {
     // 価格変更があった場合は要価格更新フラグON
     if (priceChanged) properties['要価格更新'] = { 'checkbox': true };
 
-    let res;
+    // ===== 色展開検出 =====
+    // 同じ型式1+型式2で型式3（色）が異なる商品を検索
+    const colorKey = t1 + (t2 ? '_' + t2 : '');
+    properties['色展開キー'] = { 'rich_text': [{ 'text': { 'content': colorKey } }] };
+    let colorSiblings = [];
+    try {
+      const sibFilters = [{ property: '色展開キー', rich_text: { equals: colorKey } }];
+      if (t3) sibFilters.push({ property: '型式3', rich_text: { does_not_equal: t3 } });
+      const sibData = await notionFetch(`databases/${dbId}/query`, 'POST', { filter: { and: sibFilters }, page_size: 20 });
+      colorSiblings = (sibData.results || []).filter(s => s.id !== editingProductId);
+    } catch(e) {}
+    const hasColorVariants = colorSiblings.length > 0;
+    properties['色展開あり'] = { 'checkbox': hasColorVariants };
+
+    let result;
     if (editingProductId) {
       // 上書き（更新）
-      res = await fetch(`https://api.notion.com/v1/pages/${editingProductId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28' },
-        body: JSON.stringify({ properties })
-      });
+      result = await notionFetch(`pages/${editingProductId}`, 'PATCH', { properties });
     } else {
       // 新規作成
-      res = await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28' },
-        body: JSON.stringify({ parent: { database_id: dbId }, properties })
-      });
+      result = await notionFetch('pages', 'POST', { parent: { database_id: dbId }, properties });
     }
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.message || 'Notionエラー');
 
     // Add to type master
     if (t1) addToMasterSilent('type1', t1);
     if (t2) addToMasterSilent('type2', t2);
     if (t3) addToMasterSilent('type3', t3);
 
-    hideLoading();
-    if (priceChanged) {
-      showToast('✅ 上書き登録完了（⚠️ 要価格更新フラグON）', 'success');
-    } else if (editingProductId) {
-      showToast('✅ 上書き登録しました', 'success');
-    } else {
-      showToast('✅ Notionに登録しました！', 'success');
+    // 色違いの既存商品にも「色展開あり」フラグを付与
+    if (hasColorVariants) {
+      for (const sib of colorSiblings) {
+        if (sib.properties?.['色展開あり']?.checkbox !== true) {
+          try {
+            await notionFetch(`pages/${sib.id}`, 'PATCH', { properties: { '色展開あり': { 'checkbox': true } } });
+          } catch(e) {}
+        }
+      }
     }
+
+    hideLoading();
+    let msg;
+    if (priceChanged) {
+      msg = '✅ 上書き登録完了（⚠️ 要価格更新フラグON）';
+    } else if (editingProductId) {
+      msg = '✅ 上書き登録しました';
+    } else {
+      msg = '✅ Notionに登録しました！';
+    }
+    if (hasColorVariants) msg += '\n🎨 色違い' + colorSiblings.length + '件とグループ化';
+    showToast(msg, 'success');
     setTimeout(() => showScreen('home'), 1500);
   } catch(e) {
     hideLoading();
@@ -1636,21 +1831,10 @@ function addToMasterSilent(field, val) {
 
 // ===== PRODUCT LIST =====
 async function loadProductList() {
-  const notionToken = getSetting('notion');
-  if (!notionToken) {
-    document.getElementById('stat-total').textContent = '—';
-    return;
-  }
   const dbId = currentBrand === 'PRADA' ? getSetting('prada-db') : getSetting('miumiu-db');
   if (!dbId) return;
   try {
-    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sorts: [{ timestamp: 'created_time', direction: 'descending' }], page_size: 50 })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message);
+    const data = await notionFetch(`databases/${dbId}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'descending' }], page_size: 50 });
     products[currentBrand] = data.results || [];
     renderProductList();
   } catch(e) {
@@ -1688,8 +1872,10 @@ function renderProductList() {
     const finalP = p.properties?.['Final価格（EUR）']?.number;
     const sellJpy = p.properties?.['販売価格JPY']?.number;
     const needsUpdate = p.properties?.['要価格更新']?.checkbox === true;
+    const hasColors = p.properties?.['色展開あり']?.checkbox === true;
     let badge = '';
-    if (needsUpdate) badge = '<span class="product-badge badge-warn">⚠️ 要価格更新</span>';
+    if (needsUpdate) badge += '<span class="product-badge badge-warn">⚠️ 要価格更新</span> ';
+    if (hasColors) badge += '<span class="product-badge badge-color">🎨 色展開あり</span>';
     let priceHtml = outlet ? '€' + outlet : '—';
     if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
     if (sellJpy) priceHtml += ' / ¥' + sellJpy.toLocaleString();
@@ -1725,6 +1911,12 @@ function openDetail(id) {
   const needsUpdate = props['要価格更新']?.checkbox === true;
   const finalVal = props['Final価格（EUR）']?.number;
   const priceSrc = props['価格算出元']?.select?.name || 'Outlet';
+  const hasColors = props['色展開あり']?.checkbox === true;
+  const colorKey = props['色展開キー']?.rich_text?.[0]?.plain_text || '';
+  // 同じ色展開キーの商品（自分以外）
+  const siblings = hasColors ? (products[currentBrand] || []).filter(x =>
+    x.id !== p.id && (x.properties?.['色展開キー']?.rich_text?.[0]?.plain_text || '') === colorKey
+  ) : [];
   document.getElementById('detail-body').innerHTML = `
     ${needsUpdate ? `
     <div style="background:var(--red-pale);border:1.5px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
@@ -1739,13 +1931,22 @@ function openDetail(id) {
       </div>
     </div>
     <div class="detail-card">
-      <div class="detail-card-title">型式情報</div>
+      <div class="detail-card-title">型式情報${hasColors ? ' <span style="color:#7C3AED">｜🎨 色展開あり</span>' : ''}</div>
       <div class="detail-row"><span class="detail-key">型式1</span><span class="detail-val">${get('型式1')}</span></div>
       <div class="detail-row"><span class="detail-key">型式2</span><span class="detail-val">${get('型式2')}</span></div>
       <div class="detail-row"><span class="detail-key">型式3</span><span class="detail-val">${get('型式3')}</span></div>
       <div class="detail-row"><span class="detail-key">モデル</span><span class="detail-val">${get('モデル')}</span></div>
       <div class="detail-row"><span class="detail-key">サイズ展開</span><span class="detail-val">${get('サイズ展開','ms')}</span></div>
     </div>
+    ${hasColors && siblings.length ? `
+    <div class="detail-card">
+      <div class="detail-card-title" style="color:#7C3AED">🎨 色違いの商品（${siblings.length}件）</div>
+      ${siblings.map(s => {
+        const sName = s.properties?.['商品名']?.title?.[0]?.plain_text || '—';
+        const sT3 = s.properties?.['型式3']?.rich_text?.[0]?.plain_text || '';
+        return `<div class="detail-row" style="cursor:pointer" onclick="openDetail('${s.id}')"><span class="detail-key">${sT3}</span><span class="detail-val" style="color:#7C3AED">${sName} →</span></div>`;
+      }).join('')}
+    </div>` : ''}
     <div class="detail-card">
       <div class="detail-card-title">価格情報${finalVal ? ' <span style="color:var(--red)">｜Final Priceあり</span>' : ''}</div>
       <div class="detail-row"><span class="detail-key">MSFRP（参考価格）</span><span class="detail-val">€${get('MSFRP（EUR）','number')}</span></div>
@@ -1776,15 +1977,9 @@ function openDetail(id) {
 }
 
 async function clearUpdateFlag(pageId) {
-  const notionToken = getSetting('notion');
   showLoading('フラグを解除中...');
   try {
-    const res = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28' },
-      body: JSON.stringify({ properties: { '要価格更新': { 'checkbox': false } } })
-    });
-    if (!res.ok) throw new Error('更新失敗');
+    await notionFetch(`pages/${pageId}`, 'PATCH', { properties: { '要価格更新': { 'checkbox': false } } });
     hideLoading();
     showToast('✅ 価格更新済みにしました', 'success');
     await loadProductList();
