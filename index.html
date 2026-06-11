@@ -411,6 +411,43 @@ body {
 .source-btn.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
 .source-btn.source-final.active { background: var(--red); border-color: var(--red); }
 
+/* Filter panel */
+.filter-panel {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.search-input { font-size: 14px; }
+.filter-row { display: flex; gap: 8px; }
+.sort-select { flex: 1; font-size: 13px; padding: 9px 13px; }
+.filter-checks { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--charcoal-light);
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+}
+.filter-check:has(input:checked) {
+  background: var(--charcoal);
+  color: var(--white);
+  border-color: var(--charcoal);
+}
+.filter-check input { accent-color: var(--gold); cursor: pointer; }
+
 /* Mode selector */
 .mode-grid {
   display: grid;
@@ -834,6 +871,24 @@ body {
     <button class="btn-register" onclick="startRegister()">
       ＋ 新規商品を登録
     </button>
+
+    <!-- 検索・フィルタ -->
+    <div class="filter-panel">
+      <input class="form-input search-input" id="search-input" type="search" placeholder="🔍 型式・モデル・商品名で検索…" oninput="renderProductList()">
+      <div class="filter-row">
+        <select class="form-select sort-select" id="sort-select" onchange="renderProductList()">
+          <option value="created_desc">登録日：新しい順</option>
+          <option value="created_asc">登録日：古い順</option>
+          <option value="updated_desc">更新日：新しい順</option>
+          <option value="updated_asc">更新日：古い順</option>
+        </select>
+      </div>
+      <div class="filter-checks">
+        <label class="filter-check"><input type="checkbox" id="chk-no-msfrp" onchange="renderProductList()"> 参考価格なし</label>
+        <label class="filter-check"><input type="checkbox" id="chk-losing" onchange="renderProductList()"> 競合に価格負け</label>
+        <label class="filter-check"><input type="checkbox" id="chk-update" onchange="renderProductList()"> ⚠️ 要価格更新</label>
+      </div>
+    </div>
 
     <div class="section-title" id="list-title">PRADA — 登録済み商品</div>
     <div class="product-list" id="product-list">
@@ -1305,6 +1360,9 @@ function selectBrand(brand, el) {
 function startRegister() {
   resetForm();
   document.getElementById('register-title').textContent = '新規登録 — ' + currentBrand;
+  // 最後に選択した箱サイズを引き継ぐ
+  const lastBox = localStorage.getItem('mg_last-box');
+  if (lastBox) document.getElementById('input-box-size').value = lastBox;
   showScreen('register');
   goToStep(1);
   loadTypeMaster();
@@ -1774,6 +1832,12 @@ async function submitProduct() {
     if (buymaUrl) properties['BUYMA出品URL'] = { 'url': buymaUrl };
     if (buymaCompetitorUrl && buymaCompetitorUrl !== '-' && buymaCompetitorUrl.startsWith('http')) properties['BUYMA競合URL'] = { 'url': buymaCompetitorUrl };
     if (sizes.length) properties['サイズ展開'] = { 'multi_select': sizes.map(s => ({ 'name': s })) };
+    // 箱サイズ保存＋最後の選択を記憶
+    const boxSize = document.getElementById('input-box-size').value;
+    if (boxSize) {
+      properties['箱サイズ名'] = { 'select': { 'name': boxSize } };
+      localStorage.setItem('mg_last-box', boxSize);
+    }
     // 価格変更があった場合は要価格更新フラグON
     if (priceChanged) properties['要価格更新'] = { 'checkbox': true };
 
@@ -1848,7 +1912,7 @@ async function loadProductList() {
   const dbId = currentBrand === 'PRADA' ? getSetting('prada-db') : getSetting('miumiu-db');
   if (!dbId) return;
   try {
-    const data = await notionFetch(`databases/${dbId}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'descending' }], page_size: 50 });
+    const data = await notionFetch(`databases/${dbId}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'descending' }], page_size: 100 });
     products[currentBrand] = data.results || [];
     renderProductList();
   } catch(e) {
@@ -1856,26 +1920,86 @@ async function loadProductList() {
   }
 }
 
-let currentFilter = 'all';
 function setFilter(f) {
-  currentFilter = f;
-  document.getElementById('filter-all').style.outline = f === 'all' ? '2px solid var(--gold)' : 'none';
-  document.getElementById('filter-update').style.outline = f === 'update' ? '2px solid var(--red)' : 'none';
-  document.getElementById('list-title').textContent = currentBrand + (f === 'update' ? ' — ⚠️ 要価格更新' : ' — 登録済み商品');
+  // 統計カードタップ → チェックボックスと連動
+  if (f === 'update') {
+    const chk = document.getElementById('chk-update');
+    chk.checked = !chk.checked;
+  } else {
+    document.getElementById('chk-no-msfrp').checked = false;
+    document.getElementById('chk-losing').checked = false;
+    document.getElementById('chk-update').checked = false;
+    document.getElementById('search-input').value = '';
+  }
   renderProductList();
+}
+
+// 競合の最安値（入力済みのみ）を取得
+function getMinCompetitor(props) {
+  const vals = [1,2,3,4,5]
+    .map(i => props?.['競合' + i + '価格JPY']?.number)
+    .filter(v => typeof v === 'number' && v > 0);
+  return vals.length ? Math.min(...vals) : null;
 }
 
 function renderProductList() {
   const list = document.getElementById('product-list');
-  let items = products[currentBrand] || [];
+  let items = (products[currentBrand] || []).slice();
   document.getElementById('stat-total').textContent = items.length;
-  const updateItems = items.filter(p => p.properties?.['要価格更新']?.checkbox === true);
-  document.getElementById('stat-warn').textContent = updateItems.length;
+  const updateCount = items.filter(p => p.properties?.['要価格更新']?.checkbox === true).length;
+  document.getElementById('stat-warn').textContent = updateCount;
+  document.getElementById('filter-update').style.outline = document.getElementById('chk-update')?.checked ? '2px solid var(--red)' : 'none';
 
-  if (currentFilter === 'update') items = updateItems;
+  // ===== 検索（インクリメンタル） =====
+  const q = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
+  if (q) {
+    items = items.filter(p => {
+      const props = p.properties;
+      const hay = [
+        props?.['商品名']?.title?.[0]?.plain_text,
+        props?.['型式1']?.rich_text?.[0]?.plain_text,
+        props?.['型式2']?.rich_text?.[0]?.plain_text,
+        props?.['型式3']?.rich_text?.[0]?.plain_text,
+        props?.['モデル']?.rich_text?.[0]?.plain_text,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  // ===== チェックフィルタ（AND条件） =====
+  if (document.getElementById('chk-no-msfrp')?.checked) {
+    items = items.filter(p => !(p.properties?.['MSFRP（EUR）']?.number > 0));
+  }
+  if (document.getElementById('chk-losing')?.checked) {
+    items = items.filter(p => {
+      const sell = p.properties?.['販売価格JPY']?.number || 0;
+      const minC = getMinCompetitor(p.properties);
+      return sell > 0 && minC !== null && sell > minC;
+    });
+  }
+  if (document.getElementById('chk-update')?.checked) {
+    items = items.filter(p => p.properties?.['要価格更新']?.checkbox === true);
+  }
+
+  // ===== 並び替え =====
+  const sort = document.getElementById('sort-select')?.value || 'created_desc';
+  items.sort((a, b) => {
+    const key = sort.startsWith('created') ? 'created_time' : 'last_edited_time';
+    const cmp = new Date(a[key]) - new Date(b[key]);
+    return sort.endsWith('asc') ? cmp : -cmp;
+  });
+
+  // ===== タイトル =====
+  const activeFilters = [];
+  if (q) activeFilters.push('検索: ' + q);
+  if (document.getElementById('chk-no-msfrp')?.checked) activeFilters.push('参考価格なし');
+  if (document.getElementById('chk-losing')?.checked) activeFilters.push('価格負け');
+  if (document.getElementById('chk-update')?.checked) activeFilters.push('要価格更新');
+  document.getElementById('list-title').textContent = currentBrand + ' — ' +
+    (activeFilters.length ? activeFilters.join('・') + `（${items.length}件）` : '登録済み商品');
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">${currentFilter==='update'?'✅':'📦'}</div><div class="empty-text">${currentFilter==='update'?'価格更新が必要な商品はありません':'まだ商品が登録されていません'}</div></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">${activeFilters.length?'🔍':'📦'}</div><div class="empty-text">${activeFilters.length?'該当する商品がありません':'まだ商品が登録されていません'}</div></div>`;
     return;
   }
   list.innerHTML = items.map(p => {
@@ -1887,8 +2011,11 @@ function renderProductList() {
     const sellJpy = p.properties?.['販売価格JPY']?.number;
     const needsUpdate = p.properties?.['要価格更新']?.checkbox === true;
     const hasColors = p.properties?.['色展開あり']?.checkbox === true;
+    const minC = getMinCompetitor(p.properties);
+    const losing = sellJpy > 0 && minC !== null && sellJpy > minC;
     let badge = '';
     if (needsUpdate) badge += '<span class="product-badge badge-warn">⚠️ 要価格更新</span> ';
+    if (losing) badge += '<span class="product-badge badge-warn">📉 価格負け</span> ';
     if (hasColors) badge += '<span class="product-badge badge-color">🎨 色展開あり</span>';
     let priceHtml = outlet ? '€' + outlet : '—';
     if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
@@ -2030,6 +2157,9 @@ function startEdit(targetStep = 1) {
   document.getElementById('input-memo').value = getT('MEMO');
   const src = props['価格算出元']?.select?.name;
   if (src === 'Final') setPriceSource('Final');
+  // 箱サイズ：商品に保存されたもの > 最後に選択したもの
+  const savedBox = props['箱サイズ名']?.select?.name || localStorage.getItem('mg_last-box') || '';
+  if (savedBox) document.getElementById('input-box-size').value = savedBox;
   const sizes = props['サイズ展開']?.multi_select?.map(s => s.name) || [];
   document.querySelectorAll('.size-btn').forEach(b => {
     if (sizes.includes(b.textContent)) b.classList.add('selected');
