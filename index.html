@@ -1155,27 +1155,27 @@ body {
     <div class="settings-card">
       <div class="settings-row">
         <div class="settings-key">PRADA 商品DB ID</div>
-        <input class="settings-input" id="setting-prada-db" placeholder="3365f467-b41c-4a7f-9d9b-8d75038337a6">
+        <input class="settings-input" id="setting-prada-db" placeholder="bd50a199-6eca-4355-9806-e7571c648543">
       </div>
       <div class="settings-row">
         <div class="settings-key">MIU MIU 商品DB ID</div>
-        <input class="settings-input" id="setting-miumiu-db" placeholder="731cb452-1ff9-4647-9b29-d7857470b537">
+        <input class="settings-input" id="setting-miumiu-db" placeholder="1cfb5010-0c4b-4e77-9b83-a36fc3c7b6c0">
       </div>
       <div class="settings-row">
         <div class="settings-key">PRADA 型式マスタ DB ID</div>
-        <input class="settings-input" id="setting-prada-type-db" placeholder="114bfd8d-14e0-48a1-9e69-b2a93ad711e3">
+        <input class="settings-input" id="setting-prada-type-db" placeholder="cfffd865-adfc-48df-b678-9d02943cea53">
       </div>
       <div class="settings-row">
         <div class="settings-key">MIU MIU 型式マスタ DB ID</div>
-        <input class="settings-input" id="setting-miumiu-type-db" placeholder="c26ce866-2a6f-4a12-8be1-6dd97d42783b">
+        <input class="settings-input" id="setting-miumiu-type-db" placeholder="7bf086cb-908d-4f96-964f-32bfb2c32f48">
       </div>
       <div class="settings-row">
         <div class="settings-key">カテゴリマスタ DB ID</div>
-        <input class="settings-input" id="setting-cat-db" placeholder="f5ed20ad-529e-44d9-a305-64efc2d65fd7">
+        <input class="settings-input" id="setting-cat-db" placeholder="5ebe7596-b29d-40ef-8d8d-9c7359abc441">
       </div>
       <div class="settings-row">
         <div class="settings-key">箱サイズマスタ DB ID</div>
-        <input class="settings-input" id="setting-box-db" placeholder="c95b4624-8db6-4e5b-a1c8-d6ab659a7975">
+        <input class="settings-input" id="setting-box-db" placeholder="915da652-dbf3-4257-8d06-cf60b0013074">
       </div>
     </div>
     <button class="btn-save-settings" onclick="saveSettings()">💾 設定を保存</button>
@@ -1211,13 +1211,28 @@ let aiExtracted = {};
 let editingProductId = null;
 
 const DB_IDS = {
-  PRADA: '3365f467-b41c-4a7f-9d9b-8d75038337a6',
-  'MIU MIU': '731cb452-1ff9-4647-9b29-d7857470b537',
-  PRADA_TYPE: '114bfd8d-14e0-48a1-9e69-b2a93ad711e3',
-  MIUMIU_TYPE: 'c26ce866-2a6f-4a12-8be1-6dd97d42783b',
-  CATEGORY: 'f5ed20ad-529e-44d9-a305-64efc2d65fd7',
-  BOX: 'c95b4624-8db6-4e5b-a1c8-d6ab659a7975',
+  PRADA: 'bd50a199-6eca-4355-9806-e7571c648543',
+  'MIU MIU': '1cfb5010-0c4b-4e77-9b83-a36fc3c7b6c0',
+  PRADA_TYPE: 'cfffd865-adfc-48df-b678-9d02943cea53',
+  MIUMIU_TYPE: '7bf086cb-908d-4f96-964f-32bfb2c32f48',
+  CATEGORY: '5ebe7596-b29d-40ef-8d8d-9c7359abc441',
+  BOX: '915da652-dbf3-4257-8d06-cf60b0013074',
 };
+
+// 旧ID（データソースID）が保存されている場合は正しいデータベースIDへ自動移行
+(function migrateDbIds() {
+  const fixes = {
+    'mg_prada-db': ['3365f467-b41c-4a7f-9d9b-8d75038337a6', DB_IDS.PRADA],
+    'mg_miumiu-db': ['731cb452-1ff9-4647-9b29-d7857470b537', DB_IDS['MIU MIU']],
+    'mg_prada-type-db': ['114bfd8d-14e0-48a1-9e69-b2a93ad711e3', DB_IDS.PRADA_TYPE],
+    'mg_miumiu-type-db': ['c26ce866-2a6f-4a12-8be1-6dd97d42783b', DB_IDS.MIUMIU_TYPE],
+    'mg_cat-db': ['f5ed20ad-529e-44d9-a305-64efc2d65fd7', DB_IDS.CATEGORY],
+    'mg_box-db': ['c95b4624-8db6-4e5b-a1c8-d6ab659a7975', DB_IDS.BOX],
+  };
+  Object.entries(fixes).forEach(([key, [oldId, newId]]) => {
+    if (localStorage.getItem(key) === oldId) localStorage.setItem(key, newId);
+  });
+})();
 
 // ===== SETTINGS =====
 function loadSettings() {
