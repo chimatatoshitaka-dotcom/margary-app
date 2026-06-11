@@ -205,6 +205,7 @@ body {
 .badge-ok { background: var(--green-pale); color: var(--green); }
 .badge-warn { background: var(--red-pale); color: var(--red); }
 .badge-color { background: #F3E8FF; color: #7C3AED; }
+.badge-proc { background: var(--blue-pale); color: var(--blue); }
 .badge-none { background: var(--cream-dark); color: var(--muted); }
 
 .empty-state {
@@ -571,6 +572,12 @@ body {
   flex: 1; padding: 11px; border-radius: 8px; border: none;
   font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
+.status-pick-btn {
+  padding: 13px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--white); color: var(--charcoal); font-size: 14px;
+  font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.status-pick-btn:hover { border-color: var(--gold); background: var(--gold-pale); }
 
 /* Mode selector */
 .mode-grid {
@@ -1008,6 +1015,14 @@ body {
         </select>
         <button class="btn-select-mode" id="btn-select-mode" onclick="toggleSelectionMode()">☑ 選択</button>
       </div>
+      <div class="filter-row">
+        <select class="form-select sort-select" id="status-filter" onchange="renderProductList()">
+          <option value="">画像ステータス：すべて</option>
+          <option value="未加工">未加工</option>
+          <option value="加工済み">加工済み</option>
+          <option value="出品済み">出品済み</option>
+        </select>
+      </div>
       <div class="filter-checks">
         <label class="filter-check"><input type="checkbox" id="chk-no-msfrp" onchange="renderProductList()"> 参考価格なし</label>
         <label class="filter-check"><input type="checkbox" id="chk-losing" onchange="renderProductList()"> 競合に価格負け</label>
@@ -1387,6 +1402,19 @@ body {
   </div>
 </div>
 
+<!-- Status picker modal -->
+<div class="memo-modal" id="status-modal">
+  <div class="memo-modal-box" style="max-width:320px;">
+    <div class="memo-modal-title">📁 画像ステータスを変更</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      <button class="status-pick-btn" onclick="pickStatus('未加工')">未加工</button>
+      <button class="status-pick-btn" onclick="pickStatus('加工済み')">加工済み</button>
+      <button class="status-pick-btn" onclick="pickStatus('出品済み')">出品済み</button>
+      <button style="background:var(--cream-dark);color:var(--charcoal);border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;" onclick="closeStatusModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <!-- MEMO edit modal -->
 <div class="memo-modal" id="memo-modal">
   <div class="memo-modal-box">
@@ -1476,6 +1504,40 @@ async function uploadImageToNotion(dataUrl, filename) {
 
 // Notionのfileオブジェクトから表示URLを取得
 function fileUrl(f) { return f?.file?.url || f?.external?.url || ''; }
+
+// ===== Dropbox連携 =====
+const DROPBOX_ROOT = '/000_Margary APP';
+const STATUS_FOLDERS = { '未加工': '01_未加工', '加工済み': '02_加工済み', '出品済み': '03_出品済み' };
+
+// Dropboxにファイル名で使えない文字を除去
+function sanitizeFolderName(name) {
+  return name.replace(/[\/\\:*?"<>|]/g, '_').trim();
+}
+
+// 商品のDropboxフォルダパスを構築
+// 例: /000_Margary APP/PRADA_OUT_WOMEN/01_未加工/商品名/
+function buildDropboxPath(brand, store, gender, productName, status) {
+  const brandFolder = `${sanitizeFolderName(brand).replace(/\s+/g, '')}_${store || 'OUT'}_${gender || 'WOMEN'}`;
+  const statusFolder = STATUS_FOLDERS[status] || STATUS_FOLDERS['未加工'];
+  return `${DROPBOX_ROOT}/${brandFolder}/${statusFolder}/${sanitizeFolderName(productName)}`;
+}
+
+async function dropboxCall(payload) {
+  const res = await fetch('/api/dropbox', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Dropboxエラー');
+  return data;
+}
+
+// 画像をDropboxにアップロード（圧縮なしの原本を保存）
+async function uploadImageToDropbox(dataUrl, folderPath, filename) {
+  const base64 = dataUrl.split(',')[1];
+  return dropboxCall({ action: 'upload', path: `${folderPath}/${filename}`, base64 });
+}
 
 // ===== ライトボックス（拡大表示） =====
 function openLightbox(url, event) {
@@ -2183,10 +2245,39 @@ async function submitProduct() {
       result = await notionFetch('pages', 'POST', { parent: { database_id: dbId }, properties });
     }
 
-    // Add to type master
-    if (t1) addToMasterSilent('type1', t1);
-    if (t2) addToMasterSilent('type2', t2);
-    if (t3) addToMasterSilent('type3', t3);
+    const result_data = result;
+    const pageId = editingProductId || result_data.id;
+
+    // ===== Dropbox保存（商品名フォルダに原本を保存） =====
+    if ((productImages.length || labelImages.length) && getSetting('dropbox-enabled') !== 'off') {
+      try {
+        // 既存のステータスを維持（新規は未加工）
+        const existingStatus = existing?.properties?.['画像ステータス']?.select?.name || '未加工';
+        const folderPath = buildDropboxPath(currentBrand, store, gender, productName, existingStatus);
+        let dbUploaded = 0;
+        const totalDb = productImages.length + labelImages.length;
+        for (let i = 0; i < productImages.length; i++) {
+          document.getElementById('loading-text').textContent = `Dropbox保存中... (${++dbUploaded}/${totalDb})`;
+          await uploadImageToDropbox(productImages[i].dataUrl, folderPath, `商品_${i + 1}.jpg`);
+        }
+        for (let i = 0; i < labelImages.length; i++) {
+          document.getElementById('loading-text').textContent = `Dropbox保存中... (${++dbUploaded}/${totalDb})`;
+          await uploadImageToDropbox(labelImages[i].dataUrl, folderPath, `ラベル_${i + 1}.jpg`);
+        }
+        // フォルダの共有リンクを取得してNotionに記録
+        const linkData = await dropboxCall({ action: 'share_link', path: folderPath });
+        await notionFetch(`pages/${pageId}`, 'PATCH', {
+          properties: {
+            'Dropboxフォルダ': { 'url': linkData.url },
+            '画像ステータス': { 'select': { 'name': existingStatus } }
+          }
+        });
+      } catch(dbErr) {
+        // Dropbox保存失敗してもNotion登録は成功扱い（警告のみ）
+        console.error('Dropbox保存エラー:', dbErr);
+        showToast('⚠️ Notion登録OK・Dropbox保存に失敗: ' + dbErr.message, 'error');
+      }
+    }
 
     // 色違いの既存商品にも「色展開あり」フラグを付与
     if (hasColorVariants) {
@@ -2260,6 +2351,24 @@ function getMinCompetitor(props) {
     .map(i => props?.['競合' + i + '価格JPY']?.number)
     .filter(v => typeof v === 'number' && v > 0);
   return vals.length ? Math.min(...vals) : null;
+}
+
+// ===== 一覧からの画像ステータス変更 =====
+let statusPickerId = null;
+function openStatusPicker(event, id) {
+  if (event) event.stopPropagation();
+  statusPickerId = id;
+  document.getElementById('status-modal').classList.add('active');
+}
+function closeStatusModal() {
+  document.getElementById('status-modal').classList.remove('active');
+  statusPickerId = null;
+}
+async function pickStatus(status) {
+  const id = statusPickerId;
+  closeStatusModal();
+  if (!id) return;
+  await changeImageStatus(id, status, true);
 }
 
 // ===== MEMO編集モーダル =====
@@ -2415,6 +2524,11 @@ function renderProductList() {
   if (document.getElementById('chk-update')?.checked) {
     items = items.filter(p => p.properties?.['要価格更新']?.checkbox === true);
   }
+  // 画像ステータスフィルタ
+  const statusFilter = document.getElementById('status-filter')?.value;
+  if (statusFilter) {
+    items = items.filter(p => (p.properties?.['画像ステータス']?.select?.name || '未加工') === statusFilter);
+  }
 
   // ===== 並び替え =====
   const sort = document.getElementById('sort-select')?.value || 'created_desc';
@@ -2457,6 +2571,10 @@ function renderProductList() {
     if (needsUpdate) badge += '<span class="product-badge badge-warn">⚠️ 要価格更新</span> ';
     if (losing) badge += '<span class="product-badge badge-warn">📉 価格負け</span> ';
     if (hasColors) badge += '<span class="product-badge badge-color">🎨 色展開あり</span>';
+    const imgStatus = p.properties?.['画像ステータス']?.select?.name;
+    const statusColors = { '未加工': 'badge-none', '加工済み': 'badge-proc', '出品済み': 'badge-ok' };
+    const statusBadge = `<span class="product-badge ${statusColors[imgStatus] || 'badge-none'}" onclick="openStatusPicker(event, '${p.id}')" style="cursor:pointer;">${imgStatus || '未設定'} ▾</span>`;
+    badge += ' ' + statusBadge;
     let priceHtml = outlet ? '€' + outlet : '—';
     if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
     if (sellJpy) priceHtml += ' / ¥' + sellJpy.toLocaleString();
@@ -2501,6 +2619,8 @@ function openDetail(id) {
   const priceSrc = props['価格算出元']?.select?.name || 'Outlet';
   const hasColors = props['色展開あり']?.checkbox === true;
   const isArchived = props['アーカイブ']?.checkbox === true;
+  const imgStatus = props['画像ステータス']?.select?.name || '未加工';
+  const dropboxUrl = props['Dropboxフォルダ']?.url || '';
   const colorKey = props['色展開キー']?.rich_text?.[0]?.plain_text || '';
   // 同じ色展開キーの商品（自分以外）
   const siblings = hasColors ? (products[currentBrand] || []).filter(x =>
@@ -2515,6 +2635,18 @@ function openDetail(id) {
     </div>` : '';
   document.getElementById('detail-body').innerHTML = `
     ${galleryHtml}
+    ${dropboxUrl || imgStatus ? `
+    <div class="detail-card">
+      <div class="detail-card-title">📁 画像ステータス${dropboxUrl ? ` ｜ <a href="${dropboxUrl}" target="_blank" style="color:var(--blue);text-transform:none;letter-spacing:0;">Dropboxを開く ↗</a>` : ''}</div>
+      <div style="padding:12px 16px;">
+        <div style="display:flex;gap:6px;">
+          ${['未加工','加工済み','出品済み'].map(s => `
+            <button onclick="changeImageStatus('${p.id}','${s}')" style="flex:1;padding:9px 4px;border-radius:8px;border:1.5px solid ${imgStatus===s?'var(--gold)':'var(--border)'};background:${imgStatus===s?'var(--gold)':'var(--white)'};color:${imgStatus===s?'white':'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${s}</button>
+          `).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">ステータス変更でDropboxのフォルダも自動的に移動します</div>
+      </div>
+    </div>` : ''}
     ${needsUpdate ? `
     <div style="background:var(--red-pale);border:1.5px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
       <div style="font-weight:700;color:var(--red);font-size:14px;margin-bottom:8px;">⚠️ 価格変更あり — BUYMA出品価格の更新が必要です</div>
@@ -2603,6 +2735,46 @@ async function deleteProduct(pageId) {
     showToast('🗑 削除しました', 'success');
     await loadProductList();
     setTimeout(() => showScreen('home'), 800);
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: ' + e.message, 'error');
+  }
+}
+
+async function changeImageStatus(pageId, newStatus, fromList) {
+  const p = (products[currentBrand] || []).find(x => x.id === pageId);
+  if (!p) return;
+  const props = p.properties;
+  const oldStatus = props['画像ステータス']?.select?.name || '未加工';
+  if (oldStatus === newStatus) return;
+  const productName = props['商品名']?.title?.[0]?.plain_text || '';
+  const dropboxUrl = props['Dropboxフォルダ']?.url || '';
+  const store = props['買付店舗']?.select?.name || 'OUT';
+  const gender = props['性別']?.select?.name || 'WOMEN';
+
+  showLoading('ステータス変更中...');
+  try {
+    // Dropboxフォルダを移動（フォルダが存在する場合のみ）
+    let newUrl = dropboxUrl;
+    if (dropboxUrl) {
+      const fromPath = buildDropboxPath(currentBrand, store, gender, productName, oldStatus);
+      const toPath = buildDropboxPath(currentBrand, store, gender, productName, newStatus);
+      try {
+        await dropboxCall({ action: 'move', from_path: fromPath, to_path: toPath });
+        const linkData = await dropboxCall({ action: 'share_link', path: toPath });
+        newUrl = linkData.url;
+      } catch(mvErr) {
+        console.error('フォルダ移動エラー:', mvErr);
+        // 移動失敗（既に移動済み等）でもステータス更新は続行
+      }
+    }
+    const updateProps = { '画像ステータス': { 'select': { 'name': newStatus } } };
+    if (newUrl !== dropboxUrl) updateProps['Dropboxフォルダ'] = { 'url': newUrl };
+    await notionFetch(`pages/${pageId}`, 'PATCH', { properties: updateProps });
+    hideLoading();
+    showToast(`📁 「${newStatus}」に変更しました`, 'success');
+    await loadProductList();
+    if (!fromList) openDetail(pageId);
   } catch(e) {
     hideLoading();
     showToast('エラー: ' + e.message, 'error');
