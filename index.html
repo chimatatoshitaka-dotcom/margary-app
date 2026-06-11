@@ -1327,7 +1327,7 @@ Final Priceがタグにない場合は"final":nullとしてください。複数
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         messages: [{ role: 'user', content: imageContents }]
       })
@@ -1372,7 +1372,7 @@ async function loadTypeMaster() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': getSetting('anthropic'), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         system: 'You are a helpful assistant. Return only valid JSON.',
         messages: [{ role: 'user', content: `Notion API経由で型式マスタを取得します。DB ID: ${dbId}, Notion Token: ${notionToken}。型式コードの一覧を{"type1":[],"type2":[],"type3":[]}形式で返してください。取得できない場合は空配列で返してください。` }],
