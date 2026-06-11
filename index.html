@@ -1970,6 +1970,9 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">販売価格JPY</span><span class="detail-val">¥${typeof get('販売価格JPY','number') === 'number' ? get('販売価格JPY','number').toLocaleString() : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">参考価格JPY</span><span class="detail-val">${get('参考価格JPY','formula')}</span></div>
       <div class="detail-row"><span class="detail-key">利益（概算）</span><span class="detail-val green">${get('利益','formula')}</span></div>
+      <div style="padding:10px 16px;">
+        <button onclick="startEdit(3)" style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">💴 価格を編集（シミュレーション付き）</button>
+      </div>
     </div>
     <div class="detail-card">
       <div class="detail-card-title">競合情報</div>
@@ -2004,7 +2007,7 @@ async function clearUpdateFlag(pageId) {
   }
 }
 
-function startEdit() {
+function startEdit(targetStep = 1) {
   const items = products[currentBrand] || [];
   const p = items.find(x => x.id === editingProductId);
   if (!p) return;
@@ -2033,7 +2036,7 @@ function startEdit() {
   });
   updateCalc();
   showScreen('register');
-  goToStep(1);
+  goToStep(targetStep);
 }
 
 // ===== LOADING / TOAST =====
