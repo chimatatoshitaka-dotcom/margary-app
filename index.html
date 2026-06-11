@@ -448,6 +448,67 @@ body {
 }
 .filter-check input { accent-color: var(--gold); cursor: pointer; }
 
+.btn-select-mode {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--charcoal-light);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-select-mode.active { background: var(--charcoal); color: var(--white); border-color: var(--charcoal); }
+
+.product-card.selectable { position: relative; }
+.product-card.selected { border-color: var(--gold); background: var(--gold-pale); }
+.select-check {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--white);
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: transparent;
+  transition: all 0.15s;
+}
+.product-card.selected .select-check {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--white);
+}
+
+.bulk-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--charcoal);
+  padding: 12px 16px;
+  display: none;
+  gap: 10px;
+  z-index: 150;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.2);
+}
+.bulk-bar.active { display: flex; }
+.bulk-btn {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.bulk-archive { flex: 2; background: var(--gold); color: var(--white); }
+.bulk-delete { flex: 2; background: var(--red); color: var(--white); }
+.bulk-cancel { flex: 0.6; background: var(--charcoal-light); color: var(--white); }
+
 /* Mode selector */
 .mode-grid {
   display: grid;
@@ -882,11 +943,13 @@ body {
           <option value="updated_desc">更新日：新しい順</option>
           <option value="updated_asc">更新日：古い順</option>
         </select>
+        <button class="btn-select-mode" id="btn-select-mode" onclick="toggleSelectionMode()">☑ 選択</button>
       </div>
       <div class="filter-checks">
         <label class="filter-check"><input type="checkbox" id="chk-no-msfrp" onchange="renderProductList()"> 参考価格なし</label>
         <label class="filter-check"><input type="checkbox" id="chk-losing" onchange="renderProductList()"> 競合に価格負け</label>
         <label class="filter-check"><input type="checkbox" id="chk-update" onchange="renderProductList()"> ⚠️ 要価格更新</label>
+        <label class="filter-check"><input type="checkbox" id="chk-archived" onchange="renderProductList()"> 🗂 アーカイブ</label>
       </div>
     </div>
 
@@ -1244,6 +1307,13 @@ body {
   </div>
 </div>
 
+<!-- Bulk action bar -->
+<div class="bulk-bar" id="bulk-bar">
+  <button class="bulk-btn bulk-archive" onclick="bulkArchive()">🗂 アーカイブ <span id="bulk-count-a">(0)</span></button>
+  <button class="bulk-btn bulk-delete" onclick="bulkDelete()">🗑 削除 <span id="bulk-count-d">(0)</span></button>
+  <button class="bulk-btn bulk-cancel" onclick="toggleSelectionMode()">✕</button>
+</div>
+
 <!-- Loading -->
 <div class="loading-overlay" id="loading">
   <div class="spinner"></div>
@@ -1253,6 +1323,7 @@ body {
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
 // ===== STATE =====
 let currentBrand = 'PRADA';
@@ -1264,6 +1335,32 @@ let typeMasters = { PRADA: { type1: [], type2: [], type3: [] }, 'MIU MIU': { typ
 let products = { PRADA: [], 'MIU MIU': [] };
 let aiExtracted = {};
 let editingProductId = null;
+let labelQrData = [];
+
+// ラベル画像からQRコードをデコード（jsQR使用）
+function decodeQrFromImage(dataUrl) {
+  return new Promise(resolve => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxSide = 1200;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = (typeof jsQR !== 'undefined') ? jsQR(imageData.data, canvas.width, canvas.height) : null;
+          resolve(code?.data || null);
+        } catch(e) { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    } catch(e) { resolve(null); }
+  });
+}
 
 const DB_IDS = {
   PRADA: 'bd50a199-6eca-4355-9806-e7571c648543',
@@ -1369,7 +1466,7 @@ function startRegister() {
 }
 
 function resetForm() {
-  productImages = []; labelImages = []; aiExtracted = {}; editingProductId = null;
+  productImages = []; labelImages = []; aiExtracted = {}; editingProductId = null; labelQrData = [];
   document.getElementById('product-img-preview').innerHTML = '';
   document.getElementById('label-img-preview').innerHTML = '';
   document.getElementById('ai-result').classList.remove('visible');
@@ -1443,6 +1540,13 @@ function handleImages(event, type) {
       if (type === 'label' && labelImages.length > 0) {
         document.getElementById('btn-ai-read').disabled = false;
         document.getElementById('label-add-row').style.display = 'flex';
+        // QRコードのデコードを試みる（バックグラウンド）
+        decodeQrFromImage(e.target.result).then(qr => {
+          if (qr && !labelQrData.includes(qr)) {
+            labelQrData.push(qr);
+            showToast('📷 QRコードを検出しました', 'success');
+          }
+        });
       }
     };
     reader.readAsDataURL(file);
@@ -1471,34 +1575,54 @@ async function aiReadLabel() {
         data: img.dataUrl.split(',')[1]
       }
     }));
+    const qrNote = labelQrData.length
+      ? '\n\n【QRコード読み取り結果（参考）】\nラベルのQRコードから次のデータが検出されました。型式の確認・補完に使用してください：\n' + labelQrData.join('\n')
+      : '';
     imageContents.push({
       type: 'text',
-      text: `これはPRADAまたはMIU MIUの商品タグです。以下のルールで情報を読み取り、JSONのみで返してください。
+      text: `これはPRADAまたはMIU MIUの商品タグです。タグには2つのレイアウトパターンがあります。以下のルールで情報を読み取り、JSONのみで返してください。
 
-【タグの構造】
+【パターンA：バッグ・ベルト等の横長タグ】
 - ART. 欄 → 型式1（例：2CC537、1BN026）
-- タグ下部に品番コードの行があります。パターン例：
-  「2CC537 2CYS F0002 005 01」
-  「1BN026 V OOO 2CYR F03SF 001 01」
-  ※「V OOO」のような中間コードが挟まる場合がありますが無視してください。
-- 【重要】型式3のコード = 「F」で始まるコード（例：F0002、F03SF）
-- 【重要】型式2のコード = Fコードの直前にあるコード（例：2CYS、2CYR）
-- 型式2 = 型式2コード + "_" + GROUP NAME欄の値（例：2CYR_SOFT LUX）
-- 型式3 = Fコード + "_" + COLOUR欄の値（例：F03SF_PELTRO N）
-- モデル = 商品説明行（例：CARTELLA IN PELLE。末尾のサイズ数字やカンマは除く）
-- サイズ = SIZE欄（例：80、TU。TUはワンサイズの意味）
-- MSFRP = MSFRP欄の金額（EUR、ヨーロッパ表記「3.400,00」は3400として読む）
-- Outlet price = Outlet price欄の金額（EUR）
-- Final Price = Final Price欄の金額（EUR、ない場合はnull）
+- タグ下部に品番コードの行（例：「2CC537 2CYS F0002 005 01」「1BN026 V OOO 2CYR F03SF 001 01」）
+  ※「V OOO」のような中間コードは無視
+- 型式3のコード = 「F」で始まるコード（例：F0002、F03SF）
+- 型式2のコード = Fコードの直前にあるコード（例：2CYS、2CYR）
+- 型式2 = 型式2コード + "_" + GROUP NAME欄の値
+- 型式3 = Fコード + "_" + COLOUR欄の値
+- モデル = 商品説明行（例：CARTELLA IN PELLE）
+
+【パターンB：靴等の縦並びタグ（QRコード付き）】
+- QRコードの右に品番コードが縦に3行並ぶ：
+  1行目 = 型式1（例：1E247O）
+  2行目 = 型式2のコード（例：3D8C）
+  3行目 = 型式3のコード（Fで始まる。例：F0002）
+- さらに右の列に説明が縦に並ぶ：
+  1行目 = モデル（例：CALZATURE DONNA）
+  2行目 = 素材名（例：SCAMOSCIATO+RETE）
+  3行目 = 色名（例：NERO）
+- 型式2 = 2行目コード + "_" + 素材名（例：3D8C_SCAMOSCIATO+RETE）
+- 型式3 = Fコード + "_" + 色名（例：F0002_NERO）
+
+【パターンC：アパレル（価格が別の黒いタグ/シールに記載）】
+- 本体タグの構造はパターンAと同じ（ART./COLOUR/GROUP NAME/コード行。例：「P224I 148M F0638 03」→ 型式1=P224I、型式2コード=148M、型式3コード=F0638）
+- モデル = 商品説明行（例：SHORTS）
+- 価格は本体タグではなく、別の黒いタグ/シールに記載：
+  「EUR」「Outlet 720」「MFSRP 1.800」「Tg. 40」のような表記
+  → MSFRP=1800、Outlet=720、Tg.の数字=サイズ（例：40）
+- 黒タグにもコード行がある場合は型式の確認に使用
+
+【共通】
+- サイズ = SIZE欄（TU＝ワンサイズ。靴タグにはない場合あり）
+- MSFRP / Outlet price / Final Price = 各欄の金額EUR（ヨーロッパ表記「3.400,00」は3400、「890,00」は890として読む）
+- O（オー）と0（ゼロ）の判別に注意。型式1の末尾などは文脈で判断し、QRデータがあれば優先${qrNote}
 
 【返却JSON形式】
-{"type1":"1BN026","type2":"2CYR_SOFT LUX","type3":"F03SF_PELTRO N","model":"CARTELLA IN PELLE","size":"TU","msfrp":3400,"outlet":1700,"final":null,"raw_line":"1BN026 V OOO 2CYR F03SF 001 01","confidence":"high"}
+{"type1":"1E247O","type2":"3D8C_SCAMOSCIATO+RETE","type3":"F0002_NERO","model":"CALZATURE DONNA","size":null,"msfrp":890,"outlet":450,"final":null,"raw_line":"1E247O 3D8C F0002","confidence":"high"}
 
-- raw_line：タグ下部のコード行をそのまま記載
-- confidence：読み取りに自信がない項目がある場合は"low"、明瞭なら"high"
-- Final Priceがタグにない場合は"final":null
-- 複数タグ画像がある場合は、最も情報が多い・価格が新しいものを優先
-- JSONのみ返してください。`
+- raw_line：読み取った品番コードをスペース区切りで記載
+- confidence：自信がない項目があれば"low"
+- 値が無い項目はnull。JSONのみ返してください。`
     });
     const res = await fetch('/api/analyze', {
       method: 'POST',
@@ -1929,6 +2053,7 @@ function setFilter(f) {
     document.getElementById('chk-no-msfrp').checked = false;
     document.getElementById('chk-losing').checked = false;
     document.getElementById('chk-update').checked = false;
+    document.getElementById('chk-archived').checked = false;
     document.getElementById('search-input').value = '';
   }
   renderProductList();
@@ -1942,9 +2067,91 @@ function getMinCompetitor(props) {
   return vals.length ? Math.min(...vals) : null;
 }
 
+// ===== 一括選択モード =====
+let selectionMode = false;
+let selectedIds = new Set();
+let visibleIds = [];
+let lastSelectedIdx = null;
+
+function toggleSelectionMode() {
+  selectionMode = !selectionMode;
+  selectedIds.clear();
+  lastSelectedIdx = null;
+  document.getElementById('btn-select-mode').classList.toggle('active', selectionMode);
+  document.getElementById('bulk-bar').classList.toggle('active', selectionMode);
+  renderProductList();
+}
+
+function updateBulkCounts() {
+  document.getElementById('bulk-count-a').textContent = `(${selectedIds.size})`;
+  document.getElementById('bulk-count-d').textContent = `(${selectedIds.size})`;
+}
+
+function toggleSelect(event, id, idx) {
+  if (event && event.shiftKey && lastSelectedIdx !== null && idx !== lastSelectedIdx) {
+    // Shift＋クリック：前回選択した位置から今回の位置まで範囲選択
+    const [from, to] = [Math.min(lastSelectedIdx, idx), Math.max(lastSelectedIdx, idx)];
+    for (let i = from; i <= to; i++) selectedIds.add(visibleIds[i]);
+  } else {
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+  }
+  lastSelectedIdx = idx;
+  updateBulkCounts();
+  renderProductList();
+}
+
+async function bulkArchive() {
+  if (!selectedIds.size) { showToast('商品を選択してください', 'error'); return; }
+  if (!confirm(`選択した${selectedIds.size}件をアーカイブしますか？\n一覧から非表示になります（データは保持）。`)) return;
+  showLoading(`アーカイブ中... (0/${selectedIds.size})`);
+  let done = 0;
+  try {
+    for (const id of selectedIds) {
+      await notionFetch(`pages/${id}`, 'PATCH', { properties: { 'アーカイブ': { 'checkbox': true } } });
+      done++;
+      document.getElementById('loading-text').textContent = `アーカイブ中... (${done}/${selectedIds.size})`;
+    }
+    hideLoading();
+    showToast(`🗂 ${done}件をアーカイブしました`, 'success');
+    toggleSelectionMode();
+    await loadProductList();
+  } catch(e) {
+    hideLoading();
+    showToast(`エラー（${done}件まで完了）: ` + e.message, 'error');
+    await loadProductList();
+  }
+}
+
+async function bulkDelete() {
+  if (!selectedIds.size) { showToast('商品を選択してください', 'error'); return; }
+  if (!confirm(`⚠️ 選択した${selectedIds.size}件を削除しますか？\n\nNotionのゴミ箱に移動します（30日以内は復元可能）。`)) return;
+  if (!confirm('本当に削除してよろしいですか？')) return;
+  showLoading(`削除中... (0/${selectedIds.size})`);
+  let done = 0;
+  try {
+    for (const id of selectedIds) {
+      await notionFetch(`pages/${id}`, 'PATCH', { archived: true });
+      done++;
+      document.getElementById('loading-text').textContent = `削除中... (${done}/${selectedIds.size})`;
+    }
+    hideLoading();
+    showToast(`🗑 ${done}件を削除しました`, 'success');
+    toggleSelectionMode();
+    await loadProductList();
+  } catch(e) {
+    hideLoading();
+    showToast(`エラー（${done}件まで完了）: ` + e.message, 'error');
+    await loadProductList();
+  }
+}
+
 function renderProductList() {
   const list = document.getElementById('product-list');
   let items = (products[currentBrand] || []).slice();
+  const showArchived = document.getElementById('chk-archived')?.checked;
+  // デフォルトはアーカイブ済みを除外、チェック時はアーカイブ済みのみ表示
+  items = items.filter(p => (p.properties?.['アーカイブ']?.checkbox === true) === !!showArchived);
   document.getElementById('stat-total').textContent = items.length;
   const updateCount = items.filter(p => p.properties?.['要価格更新']?.checkbox === true).length;
   document.getElementById('stat-warn').textContent = updateCount;
@@ -1995,6 +2202,7 @@ function renderProductList() {
   if (document.getElementById('chk-no-msfrp')?.checked) activeFilters.push('参考価格なし');
   if (document.getElementById('chk-losing')?.checked) activeFilters.push('価格負け');
   if (document.getElementById('chk-update')?.checked) activeFilters.push('要価格更新');
+  if (showArchived) activeFilters.push('🗂 アーカイブ');
   document.getElementById('list-title').textContent = currentBrand + ' — ' +
     (activeFilters.length ? activeFilters.join('・') + `（${items.length}件）` : '登録済み商品');
 
@@ -2002,7 +2210,8 @@ function renderProductList() {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">${activeFilters.length?'🔍':'📦'}</div><div class="empty-text">${activeFilters.length?'該当する商品がありません':'まだ商品が登録されていません'}</div></div>`;
     return;
   }
-  list.innerHTML = items.map(p => {
+  visibleIds = items.map(p => p.id);
+  list.innerHTML = items.map((p, idx) => {
     const name = p.properties?.['商品名']?.title?.[0]?.plain_text || '—';
     const t1 = p.properties?.['型式1']?.rich_text?.[0]?.plain_text || '';
     const model = p.properties?.['モデル']?.rich_text?.[0]?.plain_text || '';
@@ -2020,7 +2229,8 @@ function renderProductList() {
     let priceHtml = outlet ? '€' + outlet : '—';
     if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
     if (sellJpy) priceHtml += ' / ¥' + sellJpy.toLocaleString();
-    return `<div class="product-card" onclick="openDetail('${p.id}')">
+    return `<div class="product-card${selectionMode ? ' selectable' : ''}${selectedIds.has(p.id) ? ' selected' : ''}" style="${selectionMode ? 'user-select:none;' : ''}" onclick="${selectionMode ? `toggleSelect(event,'${p.id}',${idx})` : `openDetail('${p.id}')`}">
+      ${selectionMode ? '<div class="select-check">✓</div>' : ''}
       <div class="product-thumb">📦</div>
       <div class="product-info">
         <div class="product-name">${name}</div>
@@ -2053,6 +2263,7 @@ function openDetail(id) {
   const finalVal = props['Final価格（EUR）']?.number;
   const priceSrc = props['価格算出元']?.select?.name || 'Outlet';
   const hasColors = props['色展開あり']?.checkbox === true;
+  const isArchived = props['アーカイブ']?.checkbox === true;
   const colorKey = props['色展開キー']?.rich_text?.[0]?.plain_text || '';
   // 同じ色展開キーの商品（自分以外）
   const siblings = hasColors ? (products[currentBrand] || []).filter(x =>
@@ -2064,13 +2275,6 @@ function openDetail(id) {
       <div style="font-weight:700;color:var(--red);font-size:14px;margin-bottom:8px;">⚠️ 価格変更あり — BUYMA出品価格の更新が必要です</div>
       <button onclick="clearUpdateFlag('${p.id}')" style="width:100%;background:var(--red);color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">✅ 価格更新済みにする（フラグ解除）</button>
     </div>` : ''}
-    <div class="detail-images">
-      <div class="detail-img-main">📦</div>
-      <div class="detail-img-sub">
-        <div class="detail-img-thumb">🏷️</div>
-        <div class="detail-img-thumb"></div>
-      </div>
-    </div>
     <div class="detail-card">
       <div class="detail-card-title">型式情報${hasColors ? ' <span style="color:#7C3AED">｜🎨 色展開あり</span>' : ''}</div>
       <div class="detail-row"><span class="detail-key">型式1</span><span class="detail-val">${get('型式1')}</span></div>
@@ -2116,8 +2320,44 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">BUYMA競合URL</span><span class="detail-val">${get('BUYMA競合URL','url') !== '—' ? '<a href="'+get('BUYMA競合URL','url')+'" target="_blank" style="color:var(--blue)">開く</a>' : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">登録日</span><span class="detail-val">${p.created_time ? new Date(p.created_time).toLocaleDateString('ja-JP') : '—'}</span></div>
     </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button onclick="archiveProduct('${p.id}', ${isArchived})" style="flex:1;background:var(--white);color:var(--charcoal);border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;">${isArchived ? '↩️ アーカイブ解除' : '🗂 アーカイブ'}</button>
+      <button onclick="deleteProduct('${p.id}')" style="flex:1;background:var(--white);color:var(--red);border:1.5px solid var(--red);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;">🗑 削除</button>
+    </div>
   `;
   showScreen('detail');
+}
+
+async function archiveProduct(pageId, isArchived) {
+  const action = isArchived ? 'アーカイブを解除' : 'アーカイブ';
+  if (!confirm(`この商品を${action}しますか？\n${isArchived ? '一覧に再表示されます。' : '一覧から非表示になります（データは保持されます）。'}`)) return;
+  showLoading(action + '中...');
+  try {
+    await notionFetch(`pages/${pageId}`, 'PATCH', { properties: { 'アーカイブ': { 'checkbox': !isArchived } } });
+    hideLoading();
+    showToast(isArchived ? '↩️ アーカイブを解除しました' : '🗂 アーカイブしました', 'success');
+    await loadProductList();
+    setTimeout(() => showScreen('home'), 800);
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: ' + e.message, 'error');
+  }
+}
+
+async function deleteProduct(pageId) {
+  if (!confirm('⚠️ この商品を削除しますか？\n\nNotionのゴミ箱に移動します（30日以内はNotion側で復元可能）。')) return;
+  if (!confirm('本当に削除してよろしいですか？')) return;
+  showLoading('削除中...');
+  try {
+    await notionFetch(`pages/${pageId}`, 'PATCH', { archived: true });
+    hideLoading();
+    showToast('🗑 削除しました', 'success');
+    await loadProductList();
+    setTimeout(() => showScreen('home'), 800);
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: ' + e.message, 'error');
+  }
 }
 
 async function clearUpdateFlag(pageId) {
