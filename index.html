@@ -71,6 +71,21 @@ body {
   transition: color 0.15s;
 }
 .btn-icon:hover { color: var(--gold-light); }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.lang-toggle {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: var(--cream);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 5px 11px;
+  border-radius: 14px;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.lang-toggle:hover { background: rgba(255,255,255,0.22); }
 
 /* ===== SCREENS ===== */
 .screen { display: none; min-height: calc(100vh - 52px); }
@@ -206,6 +221,7 @@ body {
 .badge-warn { background: var(--red-pale); color: var(--red); }
 .badge-color { background: #F3E8FF; color: #7C3AED; }
 .badge-proc { background: var(--blue-pale); color: var(--blue); }
+.badge-regroup { background: #FFF3E0; color: #E65100; }
 .badge-none { background: var(--cream-dark); color: var(--muted); }
 
 .empty-state {
@@ -974,8 +990,9 @@ body {
 
 <!-- ===== HEADER ===== -->
 <header class="header">
-  <div class="header-logo">MARGARY<span> | 商品登録</span></div>
+  <div class="header-logo">MARGARY<span> | <span data-i18n="商品登録">商品登録</span></span></div>
   <div class="header-actions">
+    <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()" title="Language / 言語">🌐 <span id="lang-label">EN</span></button>
     <button class="btn-icon" onclick="showScreen('settings')" title="設定">⚙️</button>
   </div>
 </header>
@@ -991,11 +1008,11 @@ body {
     <div class="stats-row">
       <div class="stat-card" onclick="setFilter('all')" id="filter-all" style="cursor:pointer">
         <div class="stat-num" id="stat-total">0</div>
-        <div class="stat-label">登録商品数</div>
+        <div class="stat-label" data-i18n="登録商品数">登録商品数</div>
       </div>
       <div class="stat-card" onclick="setFilter('update')" id="filter-update" style="cursor:pointer">
         <div class="stat-num" id="stat-warn" style="color:var(--red)">0</div>
-        <div class="stat-label">⚠️ 要価格更新</div>
+        <div class="stat-label">⚠️ <span data-i18n="要価格更新">要価格更新</span></div>
       </div>
     </div>
 
@@ -1027,6 +1044,7 @@ body {
         <label class="filter-check"><input type="checkbox" id="chk-no-msfrp" onchange="renderProductList()"> 参考価格なし</label>
         <label class="filter-check"><input type="checkbox" id="chk-losing" onchange="renderProductList()"> 競合に価格負け</label>
         <label class="filter-check"><input type="checkbox" id="chk-update" onchange="renderProductList()"> ⚠️ 要価格更新</label>
+        <label class="filter-check"><input type="checkbox" id="chk-regroup" onchange="renderProductList()"> 🔄 要グループ再編</label>
         <label class="filter-check"><input type="checkbox" id="chk-archived" onchange="renderProductList()"> 🗂 アーカイブ</label>
       </div>
     </div>
@@ -1051,10 +1069,10 @@ body {
   <div class="register-body">
     <!-- Steps -->
     <div class="steps">
-      <div class="step active" id="step-1" onclick="goToStep(1)">① 画像</div>
-      <div class="step" id="step-2" onclick="goToStep(2)">② 型式</div>
-      <div class="step" id="step-3" onclick="goToStep(3)">③ 価格</div>
-      <div class="step" id="step-4" onclick="goToStep(4)">④ 詳細</div>
+      <div class="step active" id="step-1" onclick="goToStep(1)" data-i18n="① 画像">① 画像</div>
+      <div class="step" id="step-2" onclick="goToStep(2)" data-i18n="② 型式">② 型式</div>
+      <div class="step" id="step-3" onclick="goToStep(3)" data-i18n="③ 価格">③ 価格</div>
+      <div class="step" id="step-4" onclick="goToStep(4)" data-i18n="④ 詳細">④ 詳細</div>
     </div>
 
     <!-- Step 1: 画像 -->
@@ -1062,7 +1080,7 @@ body {
 
       <!-- 入力方式選択 -->
       <div class="form-group">
-        <div class="form-label">登録方法を選択</div>
+        <div class="form-label"None><span data-i18n="登録方法を選択">登録方法を選択</span></div>
         <div class="mode-grid">
           <button class="mode-btn" onclick="openCamera('label')">
             <div class="mode-icon">📸</div>
@@ -1089,7 +1107,7 @@ body {
       <input type="file" accept="image/*" multiple id="library-input-product" style="display:none" onchange="handleImages(event,'product')">
 
       <div class="form-group">
-        <div class="form-label">ラベル画像<span class="optional">AI読み取り用</span></div>
+        <div class="form-label"None><span data-i18n="ラベル画像">ラベル画像</span><span class="optional">AI読み取り用</span></div>
         <div class="image-preview-grid" id="label-img-preview"></div>
         <div class="add-more-row" id="label-add-row" style="display:none">
           <button class="btn-add-more" onclick="openCamera('label')">📸 撮影追加</button>
@@ -1105,7 +1123,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">商品画像<span class="optional">複数可</span></div>
+        <div class="form-label"None><span data-i18n="商品画像">商品画像</span><span class="optional">複数可</span></div>
         <div class="image-preview-grid" id="product-img-preview"></div>
         <div class="add-more-row">
           <button class="btn-add-more" onclick="openCamera('product')">📸 撮影</button>
@@ -1118,14 +1136,14 @@ body {
     <div class="form-section" id="section-2">
       <div class="input-row">
         <div class="form-group">
-          <div class="form-label">買付店舗</div>
+          <div class="form-label"None><span data-i18n="買付店舗">買付店舗</span></div>
           <select class="form-select" id="input-store" onchange="updateProductNamePreview()">
             <option value="OUT">OUT</option>
             <option value="SER">SER</option>
           </select>
         </div>
         <div class="form-group">
-          <div class="form-label">性別</div>
+          <div class="form-label"None><span data-i18n="性別">性別</span></div>
           <select class="form-select" id="input-gender" onchange="updateProductNamePreview()">
             <option value="WOMEN">WOMEN</option>
             <option value="MEN">MEN</option>
@@ -1134,7 +1152,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">型式1<span class="required">*</span></div>
+        <div class="form-label"None><span data-i18n="型式1">型式1</span><span class="required">*</span></div>
         <div class="type-input-wrap">
           <input class="form-input" id="input-type1" placeholder="例：2UH011"
             oninput="filterSuggestions('type1', this.value)"
@@ -1145,7 +1163,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">型式2<span class="optional">任意</span></div>
+        <div class="form-label"None><span data-i18n="型式2">型式2</span><span class="optional">任意</span></div>
         <div class="type-input-wrap">
           <input class="form-input" id="input-type2" placeholder="例：2DYK_GLASS BOTTE"
             oninput="filterSuggestions('type2', this.value)"
@@ -1156,7 +1174,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">型式3<span class="optional">任意</span></div>
+        <div class="form-label"None><span data-i18n="型式3">型式3</span><span class="optional">任意</span></div>
         <div class="type-input-wrap">
           <input class="form-input" id="input-type3" placeholder="例：F035G_ABETE"
             oninput="filterSuggestions('type3', this.value)"
@@ -1167,12 +1185,12 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">モデル<span class="optional">例：GALLERIA、CLEO</span></div>
+        <div class="form-label"None><span data-i18n="モデル">モデル</span><span class="optional">例：GALLERIA、CLEO</span></div>
         <input class="form-input" id="input-model" placeholder="モデル名を入力">
       </div>
 
       <div class="form-group">
-        <div class="form-label">カテゴリ</div>
+        <div class="form-label"None><span data-i18n="カテゴリ">カテゴリ</span></div>
         <select class="form-select" id="input-category">
           <option value="">選択してください</option>
           <option value="バッグ">バッグ</option>
@@ -1184,7 +1202,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">サイズ展開<span class="optional">複数選択可</span></div>
+        <div class="form-label"None><span data-i18n="サイズ展開">サイズ展開</span><span class="optional">複数選択可</span></div>
         <div class="size-grid" id="size-grid">
           <button class="size-btn" onclick="toggleSize(this)">XS</button>
           <button class="size-btn" onclick="toggleSize(this)">S</button>
@@ -1208,23 +1226,23 @@ body {
     <!-- Step 3: 価格 -->
     <div class="form-section" id="section-3">
       <div class="form-group">
-        <div class="form-label">MSFRP（参考価格）EUR</div>
+        <div class="form-label"None><span data-i18n="MSFRP（参考価格）EUR">MSFRP（参考価格）EUR</span></div>
         <input class="form-input" id="input-msfrp-eur" type="number" step="0.01" placeholder="例：580.00" oninput="updateCalc()">
       </div>
 
       <div class="input-row">
         <div class="form-group">
-          <div class="form-label">Outlet価格 EUR<span class="required">*</span></div>
+          <div class="form-label"None><span data-i18n="Outlet価格 EUR">Outlet価格 EUR</span><span class="required">*</span></div>
           <input class="form-input" id="input-outlet-eur" type="number" step="0.01" placeholder="例：290.00" oninput="updateCalc()">
         </div>
         <div class="form-group">
-          <div class="form-label" style="color:var(--red)">Final Price EUR<span class="optional">あれば</span></div>
+          <div class="form-label" style="color:var(--red)"><span data-i18n="Final Price EUR">Final Price EUR</span><span class="optional">あれば</span></div>
           <input class="form-input input-final" id="input-final-eur" type="number" step="0.01" placeholder="例：232.00" oninput="updateCalc()">
         </div>
       </div>
 
       <div class="form-group" id="price-source-group" style="display:none">
-        <div class="form-label">販売価格JPYの算出元</div>
+        <div class="form-label"None><span data-i18n="販売価格JPYの算出元">販売価格JPYの算出元</span></div>
         <div class="source-toggle">
           <button class="source-btn active" id="src-outlet" onclick="setPriceSource('Outlet')">Outlet価格</button>
           <button class="source-btn source-final" id="src-final" onclick="setPriceSource('Final')">Final Price</button>
@@ -1232,7 +1250,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">箱サイズ<span class="optional">送料が利益計算に反映</span></div>
+        <div class="form-label"None><span data-i18n="箱サイズ">箱サイズ</span><span class="optional">送料が利益計算に反映</span></div>
         <select class="form-select" id="input-box-size" onchange="updateCalc()">
           <option value="">選択してください</option>
           <option value="ACCESORIO" data-envio="20.76">ACCESORIO（26×16×6 cm｜€20.76）</option>
@@ -1258,7 +1276,7 @@ body {
         <!-- 順方向：販売価格入力 -->
         <div id="sim-fwd" class="sim-body">
           <div class="form-group">
-            <div class="form-label">販売価格JPY（出品価格）</div>
+            <div class="form-label"None><span data-i18n="販売価格JPY（出品価格）">販売価格JPY（出品価格）</span></div>
             <input class="form-input" id="input-sell-jpy" type="number" placeholder="例：142900" oninput="updateCalc()">
           </div>
         </div>
@@ -1266,7 +1284,7 @@ body {
         <!-- 逆方向：利益入力 -->
         <div id="sim-rev" class="sim-body" style="display:none">
           <div class="form-group">
-            <div class="form-label">目標２次利益JPY<span class="optional">IVA還付・税引後</span></div>
+            <div class="form-label"None><span data-i18n="目標２次利益JPY">目標２次利益JPY</span><span class="optional">IVA還付・税引後</span></div>
             <input class="form-input" id="input-target-profit" type="number" placeholder="例：30000" oninput="reverseCalc()">
           </div>
           <div class="sim-result-price" id="rev-result">販売価格JPY: —</div>
@@ -1287,7 +1305,7 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">参考価格JPY<span class="optional">MSFRP×レート</span></div>
+        <div class="form-label"None><span data-i18n="参考価格JPY">参考価格JPY</span><span class="optional">MSFRP×レート</span></div>
         <input class="form-input" id="input-ref-jpy" type="number" placeholder="自動計算" readonly style="background:var(--cream-dark);color:var(--muted)">
       </div>
     </div>
@@ -1295,7 +1313,7 @@ body {
     <!-- Step 4: 詳細 -->
     <div class="form-section" id="section-4">
       <div class="form-group">
-        <div class="form-label">BUYMA競合URL<span class="optional">自動生成</span></div>
+        <div class="form-label"None><span data-i18n="BUYMA競合URL">BUYMA競合URL</span><span class="optional">自動生成</span></div>
         <div class="url-preview visible" id="buyma-url-preview" style="display:none">-</div>
         <button class="btn-ai" onclick="generateBuymaUrl()" style="margin-top:8px">
           🔗 競合URLを生成
@@ -1303,17 +1321,17 @@ body {
       </div>
 
       <div class="form-group">
-        <div class="form-label">BUYMA出品URL<span class="optional">出品後に登録</span></div>
+        <div class="form-label"None><span data-i18n="BUYMA出品URL">BUYMA出品URL</span><span class="optional">出品後に登録</span></div>
         <input class="form-input" id="input-buyma-url" type="url" placeholder="https://www.buyma.com/...">
       </div>
 
       <div class="form-group">
-        <div class="form-label">MEMO</div>
+        <div class="form-label"None><span data-i18n="MEMO">MEMO</span></div>
         <textarea class="form-textarea" id="input-memo" placeholder="備考・注意事項など"></textarea>
       </div>
 
       <div class="form-group">
-        <div class="form-label">商品名<span class="optional">自動生成プレビュー</span></div>
+        <div class="form-label"None><span data-i18n="商品名">商品名</span><span class="optional">自動生成プレビュー</span></div>
         <div id="product-name-preview" style="padding:12px 13px;background:var(--cream-dark);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--charcoal-light);word-break:break-all;min-height:44px;">
           型式と価格を入力すると自動生成されます
         </div>
@@ -1323,9 +1341,9 @@ body {
 
   <!-- Bottom bar -->
   <div class="bottom-bar" id="bottom-bar">
-    <button class="btn-prev" id="btn-prev" onclick="prevStep()" style="display:none">← 戻る</button>
-    <button class="btn-next" id="btn-next" onclick="nextStep()">次へ →</button>
-    <button class="btn-submit" id="btn-submit" onclick="submitProduct()" style="display:none">✅ Notionに登録</button>
+    <button class="btn-prev" id="btn-prev" onclick="prevStep()" style="display:none">← <span data-i18n="戻る">戻る</span></button>
+    <button class="btn-next" id="btn-next" onclick="nextStep()"><span data-i18n="次へ">次へ</span> →</button>
+    <button class="btn-submit" id="btn-submit" onclick="submitProduct()" style="display:none" data-i18n="✅ Notionに登録">✅ Notionに登録</button>
   </div>
 </div>
 
@@ -1345,10 +1363,20 @@ body {
 <div id="screen-settings" class="screen">
   <div class="register-header">
     <button class="btn-back" onclick="showScreen('home')">←</button>
-    <div class="screen-title">設定</div>
+    <div class="screen-title" data-i18n="設定">設定</div>
   </div>
   <div class="settings-body">
-    <div class="section-title">API設定</div>
+    <div class="section-title" data-i18n="言語">言語 / Language</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="settings-key" data-i18n="言語">言語 / Language</div>
+        <select class="settings-input" id="lang-select" onchange="setLanguage(this.value)" style="font-family:inherit;font-size:15px;font-weight:700">
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+    <div class="section-title" data-i18n="API設定">API設定</div>
     <div class="settings-card">
       <div class="settings-row">
         <div class="settings-key">為替レート（€1 = ¥）</div>
@@ -1451,6 +1479,174 @@ body {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
+// ===== i18n（多言語） =====
+let currentLang = localStorage.getItem('mg_lang') || 'ja';
+
+// 日本語 → 英語の対訳辞書（UI固定文言）
+const I18N = {
+  '商品登録': 'Product Registration',
+  '登録商品数': 'Total Products',
+  '要価格更新': 'Price Update Needed',
+  '＋ 新規商品を登録': '＋ Register New Product',
+  '🔍 型式・モデル・商品名で検索…': '🔍 Search by code, model, name…',
+  '登録日：新しい順': 'Date added: Newest',
+  '登録日：古い順': 'Date added: Oldest',
+  '更新日：新しい順': 'Updated: Newest',
+  '更新日：古い順': 'Updated: Oldest',
+  '☑ 選択': '☑ Select',
+  '画像ステータス：すべて': 'Image status: All',
+  '未加工': 'Unprocessed',
+  '加工済み': 'Processed',
+  '出品済み': 'Listed',
+  '参考価格なし': 'No ref. price',
+  '競合に価格負け': 'Losing on price',
+  '価格負け': 'Losing',
+  '色展開あり': 'Has Variants',
+  '要グループ再編': 'Regroup Needed',
+  '未設定': 'Not set',
+  'MEMOを追加': 'Add memo',
+  '色展開': 'Variants',
+  '📝 MEMOを保存しました': '📝 MEMO saved',
+  '🗑 削除しました': '🗑 Deleted',
+  '✅ 価格更新済みにしました': '✅ Marked as price-updated',
+  '✅ グループ再編を完了にしました': '✅ Regroup completed',
+  '商品を選択してください': 'Please select products',
+  '型式1は必須です': 'Code 1 is required',
+  '読み取り完了！内容を確認して「次へ」を押してください': 'Reading complete! Review and press Next',
+  '🗂 アーカイブ': '🗂 Archive',
+  'PRADA — 登録済み商品': 'PRADA — Registered Products',
+  '登録済み商品': 'Registered Products',
+  '件': ' items',
+  'まだ商品が登録されていません': 'No products registered yet',
+  '該当する商品がありません': 'No matching products',
+  '新規登録': 'New Registration',
+  '編集': 'Edit',
+  '① 画像': '① Images',
+  '② 型式': '② Codes',
+  '③ 価格': '③ Price',
+  '④ 詳細': '④ Details',
+  '商品画像': 'Product Images',
+  'ラベル画像': 'Label Images',
+  '📸 撮影': '📸 Camera',
+  '🖼 取込': '🖼 Import',
+  '🤖 AIで読み取る': '🤖 Read with AI',
+  '画像を追加': 'Add image',
+  '次へ': 'Next',
+  '戻る': 'Back',
+  '買付店舗': 'Store',
+  '性別': 'Gender',
+  '型式1': 'Code 1',
+  '型式2': 'Code 2',
+  '型式3': 'Code 3',
+  'モデル': 'Model',
+  'サイズ展開': 'Sizes',
+  '箱サイズ': 'Box Size',
+  'カテゴリ': 'Category',
+  'MSFRP（参考価格）': 'MSFRP (Ref. Price)',
+  'Outlet価格': 'Outlet Price',
+  'Final価格': 'Final Price',
+  '販売価格JPY': 'Selling Price JPY',
+  '価格シミュレーション': 'Price Simulation',
+  '販売価格→利益': 'Price → Profit',
+  '利益→販売価格': 'Profit → Price',
+  '１次利益': 'Gross Profit',
+  '２次利益': 'Net Profit (after IVA)',
+  '目標２次利益JPY': 'Target Net Profit JPY',
+  'BUYMA競合URL': 'BUYMA Competitor URL',
+  'BUYMA出品URL': 'BUYMA Listing URL',
+  '競合URLを生成': 'Generate Competitor URL',
+  'MEMO': 'MEMO',
+  '商品名': 'Product Name',
+  '型式と価格を入力すると自動生成されます': 'Auto-generated from codes and price',
+  '✅ Notionに登録': '✅ Register to Notion',
+  '型式情報': 'Code Info',
+  '価格情報': 'Price Info',
+  '画像ステータス': 'Image Status',
+  '型式情報を編集': 'Edit Code Info',
+  '価格を編集': 'Edit Price (w/ simulation)',
+  'Dropboxを開く ↗': 'Open Dropbox ↗',
+  '再編完了にする': 'Mark Regroup Done',
+  '価格更新済みにする': 'Mark Price Updated',
+  'アーカイブ': 'Archive',
+  'アーカイブ解除': 'Unarchive',
+  '削除': 'Delete',
+  '🗂 アーカイブしました': '🗂 Archived',
+  '↩️ アーカイブを解除しました': '↩️ Unarchived',
+  '利益（概算）': 'Profit (est.)',
+  '💴 価格を編集（シミュレーション付き）': '💴 Edit Price (with simulation)',
+  '✏️ 型式情報を編集': '✏️ Edit Code Info',
+  '📁 画像ステータス': '📁 Image Status',
+  'Dropboxを開く ↗': 'Open Dropbox ↗',
+  'ステータスはラベルのみ変更（Dropboxフォルダは移動しません）': 'Status is label-only (Dropbox folder is not moved)',
+  '🎨 同じ出品グループの色違い': '🎨 Color variants in same group',
+  '↩️ アーカイブ解除': '↩️ Unarchive',
+  '🗑 削除': '🗑 Delete',
+  '登録日': 'Date Added',
+  '設定': 'Settings',
+  'API設定': 'API Settings',
+  '為替レート（€1 = ¥）': 'Exchange Rate (€1 = ¥)',
+  '🔑 トークンの再入力は不要です': '🔑 No need to re-enter tokens',
+  '言語': 'Language',
+  '日本語': 'Japanese',
+  'English': 'English',
+  '登録方法を選択': 'Select input method',
+  'MSFRP（参考価格）EUR': 'MSFRP (Ref. Price) EUR',
+  'Outlet価格 EUR': 'Outlet Price EUR',
+  'Final Price EUR': 'Final Price EUR',
+  '販売価格JPYの算出元': 'Price calculation source',
+  '販売価格JPY（出品価格）': 'Selling Price JPY (listing)',
+  '参考価格JPY': 'Reference Price JPY',
+  '型式と価格を入力すると自動生成されます': 'Auto-generated from codes and price',
+  '登録方法': 'Input method',
+  '📷 カメラで撮影': '📷 Take Photo',
+  '🖼 画像を取り込む': '🖼 Import Image',
+  '⌨️ 手動入力': '⌨️ Manual Input',
+};
+
+function t(jp) {
+  if (currentLang === 'ja') return jp;
+  return I18N[jp] || jp;
+}
+
+// data-i18n属性を持つ要素を翻訳（テキスト・placeholder両対応）
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const translated = t(key);
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      el.placeholder = translated;
+    } else if (el.tagName === 'OPTION') {
+      el.textContent = translated;
+    } else {
+      el.textContent = translated;
+    }
+  });
+  document.documentElement.lang = currentLang;
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('mg_lang', lang);
+  applyTranslations();
+  // 言語トグルのラベル（次に切り替わる言語を表示）
+  const lbl = document.getElementById('lang-label');
+  if (lbl) lbl.textContent = lang === 'ja' ? 'EN' : '日本語';
+  // 動的に生成される画面を再描画
+  if (typeof renderProductList === 'function' && document.getElementById('screen-home')?.classList.contains('active')) {
+    renderProductList();
+  }
+  // 詳細画面が開いていれば再描画
+  if (typeof editingProductId !== 'undefined' && document.getElementById('screen-detail')?.classList.contains('active') && currentDetailId) {
+    openDetail(currentDetailId);
+  }
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.value = lang;
+}
+
+function toggleLanguage() {
+  setLanguage(currentLang === 'ja' ? 'en' : 'ja');
+}
+
 // ===== STATE =====
 let currentBrand = 'PRADA';
 let currentStep = 1;
@@ -1465,6 +1661,8 @@ let labelQrData = [];
 let existingProductFiles = [];  // 編集時の既存画像（Notionのfileオブジェクト）
 let existingLabelFiles = [];
 let imagesChanged = false;
+let editingOldGroupKey = null;  // 編集前のグループキー（再編検出用）
+let currentDetailId = null;  // 詳細画面で表示中の商品ID（言語切替時の再描画用）
 
 // 画像を圧縮（最大1600px・JPEG80%）してアップロードサイズを抑える
 function compressImage(dataUrl, maxSide = 1600, quality = 0.8) {
@@ -1506,20 +1704,19 @@ async function uploadImageToNotion(dataUrl, filename) {
 function fileUrl(f) { return f?.file?.url || f?.external?.url || ''; }
 
 // ===== Dropbox連携 =====
-const DROPBOX_ROOT = '/000_Margary APP';
-const STATUS_FOLDERS = { '未加工': '01_未加工', '加工済み': '02_加工済み', '出品済み': '03_出品済み' };
+const DROPBOX_ROOT = '/000_Margary App';
 
 // Dropboxにファイル名で使えない文字を除去
 function sanitizeFolderName(name) {
   return name.replace(/[\/\\:*?"<>|]/g, '_').trim();
 }
 
-// 商品のDropboxフォルダパスを構築
-// 例: /000_Margary APP/PRADA_OUT_WOMEN/01_未加工/商品名/
-function buildDropboxPath(brand, store, gender, productName, status) {
+// 商品のDropboxフォルダパスを構築（ステータス階層なし・商品フォルダは1つだけ）
+// 例: /000_Margary App/PRADA_OUT_WOMEN/商品名/
+// ステータスはNotionのラベルのみで管理し、フォルダは移動しない（安全のため）
+function buildDropboxPath(brand, store, gender, productName) {
   const brandFolder = `${sanitizeFolderName(brand).replace(/\s+/g, '')}_${store || 'OUT'}_${gender || 'WOMEN'}`;
-  const statusFolder = STATUS_FOLDERS[status] || STATUS_FOLDERS['未加工'];
-  return `${DROPBOX_ROOT}/${brandFolder}/${statusFolder}/${sanitizeFolderName(productName)}`;
+  return `${DROPBOX_ROOT}/${brandFolder}/${sanitizeFolderName(productName)}`;
 }
 
 async function dropboxCall(payload) {
@@ -1661,7 +1858,7 @@ function selectBrand(brand, el) {
   currentBrand = brand;
   document.querySelectorAll('.brand-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('list-title').textContent = brand + ' — 登録済み商品';
+  document.getElementById('list-title').textContent = brand + ' — ' + t('登録済み商品');
   loadProductList();
   loadTypeMaster();
 }
@@ -1669,7 +1866,7 @@ function selectBrand(brand, el) {
 // ===== REGISTER =====
 function startRegister() {
   resetForm();
-  document.getElementById('register-title').textContent = '新規登録 — ' + currentBrand;
+  document.getElementById('register-title').textContent = t('新規登録') + ' — ' + currentBrand;
   // 最後に選択した箱サイズを引き継ぐ
   const lastBox = localStorage.getItem('mg_last-box');
   if (lastBox) document.getElementById('input-box-size').value = lastBox;
@@ -2064,14 +2261,37 @@ function reverseCalc() {
   updateProductNamePreview();
 }
 
+// 実効価格 = Final優先、空欄ならOutlet
+function getEffectivePrice() {
+  const finalP = parseFloat(document.getElementById('input-final-eur').value) || 0;
+  const outlet = parseFloat(document.getElementById('input-outlet-eur').value) || 0;
+  return finalP > 0 ? finalP : outlet;
+}
+
+// 商品からの実効価格取得（Notionプロパティから）
+function effectivePriceOf(props) {
+  const finalP = props['Final価格（EUR）']?.number || 0;
+  const outlet = props['Outlet価格（EUR）']?.number || 0;
+  return finalP > 0 ? finalP : outlet;
+}
+
+// グループキー = 型式1_型式2_€実効価格（同キー＝同一出品グループ＝同一Dropboxフォルダ）
+function buildGroupKey(t1, t2, effPrice) {
+  const base = [t1, t2].filter(Boolean).join('_');
+  return effPrice > 0 ? `${base}_€${effPrice.toFixed(2)}` : base;
+}
+function groupKeyOf(props) {
+  const t1 = props['型式1']?.rich_text?.[0]?.plain_text || '';
+  const t2 = props['型式2']?.rich_text?.[0]?.plain_text || '';
+  return buildGroupKey(t1, t2, effectivePriceOf(props));
+}
+
 function updateProductNamePreview() {
   const t1 = document.getElementById('input-type1').value.trim();
   const t2 = document.getElementById('input-type2').value.trim();
-  const t3 = document.getElementById('input-type3').value.trim();
-  const base = getBasePrice();
-  const parts = [t1, t2, t3].filter(Boolean);
-  if (base) parts.push('€' + base.toFixed(2));
-  const name = parts.join('_');
+  const eff = getEffectivePrice();
+  // 商品名 = グループ単位 = 型式1_型式2_€実効価格（型式3＝色は含めない）
+  const name = buildGroupKey(t1, t2, eff);
   document.getElementById('product-name-preview').textContent = name || '型式と価格を入力すると自動生成されます';
 }
 
@@ -2113,11 +2333,11 @@ async function submitProduct() {
   const memo = document.getElementById('input-memo').value.trim();
   const buymaUrl = document.getElementById('input-buyma-url').value.trim();
   const sizes = getSelectedSizes();
-  const base = getBasePrice();
+  const eff = getEffectivePrice();
 
-  const parts = [t1, t2, t3].filter(Boolean);
-  if (base) parts.push('€' + base.toFixed(2));
-  const productName = parts.join('_');
+  // 商品名 = グループキー = 型式1_型式2_€実効価格（型式3＝色は含めない）
+  const groupKey = buildGroupKey(t1, t2, eff);
+  const productName = groupKey;
   const buymaCompetitorUrl = document.getElementById('buyma-url-preview').textContent;
 
   showLoading('既存登録を確認中...');
@@ -2187,19 +2407,27 @@ async function submitProduct() {
     // 価格変更があった場合は要価格更新フラグON
     if (priceChanged) properties['要価格更新'] = { 'checkbox': true };
 
-    // ===== 色展開検出 =====
-    // 同じ型式1+型式2で型式3（色）が異なる商品を検索
-    const colorKey = t1 + (t2 ? '_' + t2 : '');
+    // ===== グループ化（型式1_型式2_実効価格） =====
+    // 同じグループキー＝同じ価格の色違い＝同一出品グループ
+    const colorKey = t1 + (t2 ? '_' + t2 : '');  // 色展開キー（価格抜き、参考用）
     properties['色展開キー'] = { 'rich_text': [{ 'text': { 'content': colorKey } }] };
-    let colorSiblings = [];
+    properties['グループキー'] = { 'rich_text': [{ 'text': { 'content': groupKey } }] };
+    // 同じグループキーの商品（自分以外）＝同一グループの色違い
+    let groupSiblings = [];
     try {
-      const sibFilters = [{ property: '色展開キー', rich_text: { equals: colorKey } }];
-      if (t3) sibFilters.push({ property: '型式3', rich_text: { does_not_equal: t3 } });
-      const sibData = await notionFetch(`databases/${dbId}/query`, 'POST', { filter: { and: sibFilters }, page_size: 20 });
-      colorSiblings = (sibData.results || []).filter(s => s.id !== editingProductId);
+      const sibData = await notionFetch(`databases/${dbId}/query`, 'POST', {
+        filter: { property: 'グループキー', rich_text: { equals: groupKey } }, page_size: 50
+      });
+      groupSiblings = (sibData.results || []).filter(s => s.id !== editingProductId && s.id !== existing?.id);
     } catch(e) {}
-    const hasColorVariants = colorSiblings.length > 0;
+    const hasColorVariants = groupSiblings.length > 0;
     properties['色展開あり'] = { 'checkbox': hasColorVariants };
+    // 同グループの代表からDropboxフォルダを引き継ぐ（1グループ1フォルダ）
+    let groupFolderUrl = '';
+    for (const sib of groupSiblings) {
+      const u = sib.properties?.['Dropboxフォルダ']?.url;
+      if (u) { groupFolderUrl = u; break; }
+    }
 
     // ===== 画像アップロード =====
     // 新規追加分をNotionにアップロードし、既存（削除されていないもの）と結合
@@ -2248,23 +2476,25 @@ async function submitProduct() {
     const result_data = result;
     const pageId = editingProductId || result_data.id;
 
-    // ===== Dropbox保存（商品名フォルダに原本を保存） =====
+    // ===== Dropbox保存（1グループ1フォルダ・色はファイル名接頭辞で区別） =====
     if ((productImages.length || labelImages.length) && getSetting('dropbox-enabled') !== 'off') {
       try {
-        // 既存のステータスを維持（新規は未加工）
         const existingStatus = existing?.properties?.['画像ステータス']?.select?.name || '未加工';
-        const folderPath = buildDropboxPath(currentBrand, store, gender, productName, existingStatus);
+        // グループ単位のフォルダ（商品名＝グループキーなので同グループは同フォルダ）
+        const folderPath = buildDropboxPath(currentBrand, store, gender, groupKey);
+        // 色（型式3）をファイル名接頭辞に。型式3が無ければ接頭辞なし
+        const colorPrefix = t3 ? sanitizeFolderName(t3) + '_' : '';
         let dbUploaded = 0;
         const totalDb = productImages.length + labelImages.length;
         for (let i = 0; i < productImages.length; i++) {
           document.getElementById('loading-text').textContent = `Dropbox保存中... (${++dbUploaded}/${totalDb})`;
-          await uploadImageToDropbox(productImages[i].dataUrl, folderPath, `商品_${i + 1}.jpg`);
+          await uploadImageToDropbox(productImages[i].dataUrl, folderPath, `${colorPrefix}商品_${i + 1}.jpg`);
         }
         for (let i = 0; i < labelImages.length; i++) {
           document.getElementById('loading-text').textContent = `Dropbox保存中... (${++dbUploaded}/${totalDb})`;
-          await uploadImageToDropbox(labelImages[i].dataUrl, folderPath, `ラベル_${i + 1}.jpg`);
+          await uploadImageToDropbox(labelImages[i].dataUrl, folderPath, `${colorPrefix}ラベル_${i + 1}.jpg`);
         }
-        // フォルダの共有リンクを取得してNotionに記録
+        // フォルダの共有リンク（グループで共通）
         const linkData = await dropboxCall({ action: 'share_link', path: folderPath });
         await notionFetch(`pages/${pageId}`, 'PATCH', {
           properties: {
@@ -2273,21 +2503,53 @@ async function submitProduct() {
           }
         });
       } catch(dbErr) {
-        // Dropbox保存失敗してもNotion登録は成功扱い（警告のみ）
         console.error('Dropbox保存エラー:', dbErr);
         showToast('⚠️ Notion登録OK・Dropbox保存に失敗: ' + dbErr.message, 'error');
       }
+    } else if (groupFolderUrl && !editingProductId) {
+      // 画像なしでも同グループにフォルダがあればリンクを引き継ぐ
+      try {
+        await notionFetch(`pages/${pageId}`, 'PATCH', { properties: { 'Dropboxフォルダ': { 'url': groupFolderUrl } } });
+      } catch(e) {}
     }
 
-    // 色違いの既存商品にも「色展開あり」フラグを付与
+    // 同グループの既存商品にも「色展開あり」フラグを付与
     if (hasColorVariants) {
-      for (const sib of colorSiblings) {
+      for (const sib of groupSiblings) {
         if (sib.properties?.['色展開あり']?.checkbox !== true) {
           try {
             await notionFetch(`pages/${sib.id}`, 'PATCH', { properties: { '色展開あり': { 'checkbox': true } } });
           } catch(e) {}
         }
       }
+    }
+
+    // ===== グループ再編の検出（編集で価格が変わりグループキーが変化した場合） =====
+    let regroupAlert = '';
+    if (editingProductId && editingOldGroupKey && editingOldGroupKey !== groupKey) {
+      try {
+        // 旧グループに残る兄弟（自分以外で旧グループキーを持つ商品）
+        const oldGroupData = await notionFetch(`databases/${dbId}/query`, 'POST', {
+          filter: { property: 'グループキー', rich_text: { equals: editingOldGroupKey } }, page_size: 50
+        });
+        const oldRemaining = (oldGroupData.results || []).filter(s => s.id !== editingProductId);
+        const t3disp = t3 || 'この商品';
+        regroupAlert = `\n\n⚠️ グループ再編が必要です\n` +
+          `「${t3disp}」が別グループに移動しました：\n` +
+          `  旧：${editingOldGroupKey}\n` +
+          `  新：${groupKey}\n\n` +
+          `影響する出品ページ：\n` +
+          `  ・旧グループ（${editingOldGroupKey}）：残り${oldRemaining.length}色\n` +
+          `  ・新グループ（${groupKey}）：${hasColorVariants ? groupSiblings.length + 1 : 1}色\n\n` +
+          `👉 両グループの画像・出品ページの再作成が必要です。`;
+        // この商品＋旧グループ残存商品＋新グループ既存商品すべてに「要グループ再編」フラグ
+        const toFlag = [pageId, ...oldRemaining.map(s => s.id), ...groupSiblings.map(s => s.id)];
+        for (const fid of toFlag) {
+          try {
+            await notionFetch(`pages/${fid}`, 'PATCH', { properties: { '要グループ再編': { 'checkbox': true } } });
+          } catch(e) {}
+        }
+      } catch(e) { console.error('グループ再編検出エラー:', e); }
     }
 
     hideLoading();
@@ -2299,8 +2561,12 @@ async function submitProduct() {
     } else {
       msg = '✅ Notionに登録しました！';
     }
-    if (hasColorVariants) msg += '\n🎨 色違い' + colorSiblings.length + '件とグループ化';
+    if (hasColorVariants) msg += '\n🎨 同価格の色違い' + groupSiblings.length + '件と同じグループに';
     showToast(msg, 'success');
+    // グループ再編が必要な場合は即時アラート（重要な変更のため確認ダイアログ）
+    if (regroupAlert) {
+      alert('🔄 グループ構成の変更を検出しました' + regroupAlert + '\n\n対象商品に「⚠️要グループ再編」フラグを立てました。一覧のフィルタで確認できます。');
+    }
     setTimeout(() => showScreen('home'), 1500);
   } catch(e) {
     hideLoading();
@@ -2339,6 +2605,7 @@ function setFilter(f) {
     document.getElementById('chk-no-msfrp').checked = false;
     document.getElementById('chk-losing').checked = false;
     document.getElementById('chk-update').checked = false;
+    document.getElementById('chk-regroup').checked = false;
     document.getElementById('chk-archived').checked = false;
     document.getElementById('search-input').value = '';
   }
@@ -2396,7 +2663,7 @@ async function saveMemoModal() {
     });
     hideLoading();
     closeMemoModal();
-    showToast('📝 MEMOを保存しました', 'success');
+    showToast(t('📝 MEMOを保存しました'), 'success');
     await loadProductList();
   } catch(e) {
     hideLoading();
@@ -2524,6 +2791,9 @@ function renderProductList() {
   if (document.getElementById('chk-update')?.checked) {
     items = items.filter(p => p.properties?.['要価格更新']?.checkbox === true);
   }
+  if (document.getElementById('chk-regroup')?.checked) {
+    items = items.filter(p => p.properties?.['要グループ再編']?.checkbox === true);
+  }
   // 画像ステータスフィルタ
   const statusFilter = document.getElementById('status-filter')?.value;
   if (statusFilter) {
@@ -2544,12 +2814,13 @@ function renderProductList() {
   if (document.getElementById('chk-no-msfrp')?.checked) activeFilters.push('参考価格なし');
   if (document.getElementById('chk-losing')?.checked) activeFilters.push('価格負け');
   if (document.getElementById('chk-update')?.checked) activeFilters.push('要価格更新');
+  if (document.getElementById('chk-regroup')?.checked) activeFilters.push('要グループ再編');
   if (showArchived) activeFilters.push('🗂 アーカイブ');
   document.getElementById('list-title').textContent = currentBrand + ' — ' +
-    (activeFilters.length ? activeFilters.join('・') + `（${items.length}件）` : '登録済み商品');
+    (activeFilters.length ? activeFilters.join('・') + `（${items.length}${t('件')}）` : t('登録済み商品'));
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">${activeFilters.length?'🔍':'📦'}</div><div class="empty-text">${activeFilters.length?'該当する商品がありません':'まだ商品が登録されていません'}</div></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">${activeFilters.length?'🔍':'📦'}</div><div class="empty-text">${activeFilters.length?t('該当する商品がありません'):t('まだ商品が登録されていません')}</div></div>`;
     return;
   }
   visibleIds = items.map(p => p.id);
@@ -2568,12 +2839,13 @@ function renderProductList() {
     const minC = getMinCompetitor(p.properties);
     const losing = sellJpy > 0 && minC !== null && sellJpy > minC;
     let badge = '';
-    if (needsUpdate) badge += '<span class="product-badge badge-warn">⚠️ 要価格更新</span> ';
-    if (losing) badge += '<span class="product-badge badge-warn">📉 価格負け</span> ';
-    if (hasColors) badge += '<span class="product-badge badge-color">🎨 色展開あり</span>';
+    if (needsUpdate) badge += '<span class="product-badge badge-warn">⚠️ ' + t('要価格更新') + '</span> ';
+    if (p.properties?.['要グループ再編']?.checkbox === true) badge += '<span class="product-badge badge-regroup">🔄 ' + t('要グループ再編') + '</span> ';
+    if (losing) badge += '<span class="product-badge badge-warn">📉 ' + t('価格負け') + '</span> ';
+    if (hasColors) badge += '<span class="product-badge badge-color">🎨 ' + t('色展開あり') + '</span>';
     const imgStatus = p.properties?.['画像ステータス']?.select?.name;
     const statusColors = { '未加工': 'badge-none', '加工済み': 'badge-proc', '出品済み': 'badge-ok' };
-    const statusBadge = `<span class="product-badge ${statusColors[imgStatus] || 'badge-none'}" onclick="openStatusPicker(event, '${p.id}')" style="cursor:pointer;">${imgStatus || '未設定'} ▾</span>`;
+    const statusBadge = `<span class="product-badge ${statusColors[imgStatus] || 'badge-none'}" onclick="openStatusPicker(event, '${p.id}')" style="cursor:pointer;">${imgStatus ? t(imgStatus) : t('未設定')} ▾</span>`;
     badge += ' ' + statusBadge;
     let priceHtml = outlet ? '€' + outlet : '—';
     if (finalP) priceHtml += ' <span style="color:var(--red);font-weight:700">→ €' + finalP + '</span>';
@@ -2590,7 +2862,7 @@ function renderProductList() {
         <div class="product-name">${name}</div>
         <div class="product-meta">${metaParts.join(' · ')}</div>
         <div class="product-price">${priceHtml}</div>
-        <div class="product-memo" onclick="openMemoModal('${p.id}', event)">📝 ${memo ? memo.length > 40 ? memo.slice(0,40) + '…' : memo : '<span style="color:var(--border)">MEMOを追加</span>'}</div>
+        <div class="product-memo" onclick="openMemoModal('${p.id}', event)">📝 ${memo ? memo.length > 40 ? memo.slice(0,40) + '…' : memo : '<span style="color:var(--border)">' + t('MEMOを追加') + '</span>'}</div>
         ${badge}
       </div>
     </div>`;
@@ -2602,6 +2874,7 @@ function openDetail(id) {
   const p = items.find(x => x.id === id);
   if (!p) return;
   editingProductId = id;
+  currentDetailId = id;
   const props = p.properties;
   const get = (key, type='text') => {
     if (!props[key]) return '—';
@@ -2621,11 +2894,11 @@ function openDetail(id) {
   const isArchived = props['アーカイブ']?.checkbox === true;
   const imgStatus = props['画像ステータス']?.select?.name || '未加工';
   const dropboxUrl = props['Dropboxフォルダ']?.url || '';
-  const colorKey = props['色展開キー']?.rich_text?.[0]?.plain_text || '';
-  // 同じ色展開キーの商品（自分以外）
-  const siblings = hasColors ? (products[currentBrand] || []).filter(x =>
-    x.id !== p.id && (x.properties?.['色展開キー']?.rich_text?.[0]?.plain_text || '') === colorKey
-  ) : [];
+  const myGroupKey = props['グループキー']?.rich_text?.[0]?.plain_text || groupKeyOf(props);
+  // 同じグループキー（型式1_型式2_同価格）の色違い商品（自分以外）
+  const siblings = (products[currentBrand] || []).filter(x =>
+    x.id !== p.id && (x.properties?.['グループキー']?.rich_text?.[0]?.plain_text || groupKeyOf(x.properties)) === myGroupKey
+  );
   const productFiles = props['商品画像']?.files || [];
   const labelFiles = props['ラベル画像']?.files || [];
   const galleryHtml = (productFiles.length || labelFiles.length) ? `
@@ -2637,23 +2910,29 @@ function openDetail(id) {
     ${galleryHtml}
     ${dropboxUrl || imgStatus ? `
     <div class="detail-card">
-      <div class="detail-card-title">📁 画像ステータス${dropboxUrl ? ` ｜ <a href="${dropboxUrl}" target="_blank" style="color:var(--blue);text-transform:none;letter-spacing:0;">Dropboxを開く ↗</a>` : ''}</div>
+      <div class="detail-card-title">📁 ${t('画像ステータス')}${dropboxUrl ? ` ｜ <a href="${dropboxUrl}" target="_blank" style="color:var(--blue);text-transform:none;letter-spacing:0;">${t('Dropboxを開く ↗')}</a>` : ''}</div>
       <div style="padding:12px 16px;">
         <div style="display:flex;gap:6px;">
           ${['未加工','加工済み','出品済み'].map(s => `
             <button onclick="changeImageStatus('${p.id}','${s}')" style="flex:1;padding:9px 4px;border-radius:8px;border:1.5px solid ${imgStatus===s?'var(--gold)':'var(--border)'};background:${imgStatus===s?'var(--gold)':'var(--white)'};color:${imgStatus===s?'white':'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${s}</button>
           `).join('')}
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px;">ステータス変更でDropboxのフォルダも自動的に移動します</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">ステータスはラベルのみ変更（Dropboxフォルダは移動しません）</div>
       </div>
+    </div>` : ''}
+    ${props['要グループ再編']?.checkbox === true ? `
+    <div style="background:#FFF3E0;border:1.5px solid #E65100;border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+      <div style="font-weight:700;color:#E65100;font-size:14px;margin-bottom:6px;">🔄 グループ再編が必要です</div>
+      <div style="font-size:12px;color:var(--charcoal-light);margin-bottom:8px;">価格変更でこの商品の出品グループが変わりました。画像・出品ページを再作成してから、下のボタンで完了にしてください。</div>
+      <button onclick="clearRegroupFlag('${p.id}')" style="width:100%;background:#E65100;color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">✅ ${t('再編完了にする')}</button>
     </div>` : ''}
     ${needsUpdate ? `
     <div style="background:var(--red-pale);border:1.5px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
       <div style="font-weight:700;color:var(--red);font-size:14px;margin-bottom:8px;">⚠️ 価格変更あり — BUYMA出品価格の更新が必要です</div>
-      <button onclick="clearUpdateFlag('${p.id}')" style="width:100%;background:var(--red);color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">✅ 価格更新済みにする（フラグ解除）</button>
+      <button onclick="clearUpdateFlag('${p.id}')" style="width:100%;background:var(--red);color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">✅ ${t('価格更新済みにする')}</button>
     </div>` : ''}
     <div class="detail-card">
-      <div class="detail-card-title">型式情報${hasColors ? ' <span style="color:#7C3AED">｜🎨 色展開あり</span>' : ''}</div>
+      <div class="detail-card-title">${t('型式情報')}${hasColors ? ' <span style="color:#7C3AED">｜🎨 色展開あり</span>' : ''}</div>
       <div class="detail-row"><span class="detail-key">型式1</span><span class="detail-val">${get('型式1')}</span></div>
       <div class="detail-row"><span class="detail-key">型式2</span><span class="detail-val">${get('型式2')}</span></div>
       <div class="detail-row"><span class="detail-key">型式3</span><span class="detail-val">${get('型式3')}</span></div>
@@ -2661,20 +2940,21 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">買付店舗 / 性別</span><span class="detail-val">${props['買付店舗']?.select?.name || '—'} / ${props['性別']?.select?.name || '—'}</span></div>
       <div class="detail-row"><span class="detail-key">サイズ展開</span><span class="detail-val">${get('サイズ展開','ms')}</span></div>
       <div style="padding:10px 16px;">
-        <button onclick="startEdit(2)" style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">✏️ 型式情報を編集</button>
+        <button onclick="startEdit(2)" style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">✏️ ${t('型式情報を編集')}</button>
       </div>
     </div>
-    ${hasColors && siblings.length ? `
+    ${siblings.length ? `
     <div class="detail-card">
-      <div class="detail-card-title" style="color:#7C3AED">🎨 色違いの商品（${siblings.length}件）</div>
+      <div class="detail-card-title" style="color:#7C3AED">🎨 同じ出品グループの色違い（${siblings.length}件）</div>
+      <div style="font-size:11px;color:var(--muted);padding:4px 16px 8px;">同価格・同フォルダ・1ページでまとめて出品</div>
       ${siblings.map(s => {
         const sName = s.properties?.['商品名']?.title?.[0]?.plain_text || '—';
-        const sT3 = s.properties?.['型式3']?.rich_text?.[0]?.plain_text || '';
+        const sT3 = s.properties?.['型式3']?.rich_text?.[0]?.plain_text || '(色なし)';
         return `<div class="detail-row" style="cursor:pointer" onclick="openDetail('${s.id}')"><span class="detail-key">${sT3}</span><span class="detail-val" style="color:#7C3AED">${sName} →</span></div>`;
       }).join('')}
     </div>` : ''}
     <div class="detail-card">
-      <div class="detail-card-title">価格情報${finalVal ? ' <span style="color:var(--red)">｜Final Priceあり</span>' : ''}</div>
+      <div class="detail-card-title">${t('価格情報')}${finalVal ? ' <span style="color:var(--red)">｜Final Priceあり</span>' : ''}</div>
       <div class="detail-row"><span class="detail-key">MSFRP（参考価格）</span><span class="detail-val">€${get('MSFRP（EUR）','number')}</span></div>
       <div class="detail-row"><span class="detail-key">Outlet価格</span><span class="detail-val gold">€${get('Outlet価格（EUR）','number')}</span></div>
       ${finalVal ? `<div class="detail-row"><span class="detail-key" style="color:var(--red);font-weight:700">Final Price</span><span class="detail-val red" style="font-size:16px">€${finalVal}</span></div>` : ''}
@@ -2683,7 +2963,7 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">参考価格JPY</span><span class="detail-val">${get('参考価格JPY','formula')}</span></div>
       <div class="detail-row"><span class="detail-key">利益（概算）</span><span class="detail-val green">${get('利益','formula')}</span></div>
       <div style="padding:10px 16px;">
-        <button onclick="startEdit(3)" style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">💴 価格を編集（シミュレーション付き）</button>
+        <button onclick="startEdit(3)" style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">💴 ${t('価格を編集')}</button>
       </div>
     </div>
     <div class="detail-card">
@@ -2702,8 +2982,8 @@ function openDetail(id) {
       <div class="detail-row"><span class="detail-key">登録日</span><span class="detail-val">${p.created_time ? new Date(p.created_time).toLocaleDateString('ja-JP') : '—'}</span></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px;">
-      <button onclick="archiveProduct('${p.id}', ${isArchived})" style="flex:1;background:var(--white);color:var(--charcoal);border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;">${isArchived ? '↩️ アーカイブ解除' : '🗂 アーカイブ'}</button>
-      <button onclick="deleteProduct('${p.id}')" style="flex:1;background:var(--white);color:var(--red);border:1.5px solid var(--red);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;">🗑 削除</button>
+      <button onclick="archiveProduct('${p.id}', ${isArchived})" style="flex:1;background:var(--white);color:var(--charcoal);border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;">${isArchived ? '↩️ ' + t('アーカイブ解除') : '🗂 ' + t('アーカイブ')}</button>
+      <button onclick="deleteProduct('${p.id}')" style="flex:1;background:var(--white);color:var(--red);border:1.5px solid var(--red);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;">🗑 ${t('削除')}</button>
     </div>
   `;
   showScreen('detail');
@@ -2716,7 +2996,7 @@ async function archiveProduct(pageId, isArchived) {
   try {
     await notionFetch(`pages/${pageId}`, 'PATCH', { properties: { 'アーカイブ': { 'checkbox': !isArchived } } });
     hideLoading();
-    showToast(isArchived ? '↩️ アーカイブを解除しました' : '🗂 アーカイブしました', 'success');
+    showToast(isArchived ? t('↩️ アーカイブを解除しました') : t('🗂 アーカイブしました'), 'success');
     await loadProductList();
     setTimeout(() => showScreen('home'), 800);
   } catch(e) {
@@ -2732,7 +3012,7 @@ async function deleteProduct(pageId) {
   try {
     await notionFetch(`pages/${pageId}`, 'PATCH', { archived: true });
     hideLoading();
-    showToast('🗑 削除しました', 'success');
+    showToast(t('🗑 削除しました'), 'success');
     await loadProductList();
     setTimeout(() => showScreen('home'), 800);
   } catch(e) {
@@ -2747,30 +3027,13 @@ async function changeImageStatus(pageId, newStatus, fromList) {
   const props = p.properties;
   const oldStatus = props['画像ステータス']?.select?.name || '未加工';
   if (oldStatus === newStatus) return;
-  const productName = props['商品名']?.title?.[0]?.plain_text || '';
-  const dropboxUrl = props['Dropboxフォルダ']?.url || '';
-  const store = props['買付店舗']?.select?.name || 'OUT';
-  const gender = props['性別']?.select?.name || 'WOMEN';
 
   showLoading('ステータス変更中...');
   try {
-    // Dropboxフォルダを移動（フォルダが存在する場合のみ）
-    let newUrl = dropboxUrl;
-    if (dropboxUrl) {
-      const fromPath = buildDropboxPath(currentBrand, store, gender, productName, oldStatus);
-      const toPath = buildDropboxPath(currentBrand, store, gender, productName, newStatus);
-      try {
-        await dropboxCall({ action: 'move', from_path: fromPath, to_path: toPath });
-        const linkData = await dropboxCall({ action: 'share_link', path: toPath });
-        newUrl = linkData.url;
-      } catch(mvErr) {
-        console.error('フォルダ移動エラー:', mvErr);
-        // 移動失敗（既に移動済み等）でもステータス更新は続行
-      }
-    }
-    const updateProps = { '画像ステータス': { 'select': { 'name': newStatus } } };
-    if (newUrl !== dropboxUrl) updateProps['Dropboxフォルダ'] = { 'url': newUrl };
-    await notionFetch(`pages/${pageId}`, 'PATCH', { properties: updateProps });
+    // フォルダは移動せず、Notionのラベルのみ更新（安全のため）
+    await notionFetch(`pages/${pageId}`, 'PATCH', {
+      properties: { '画像ステータス': { 'select': { 'name': newStatus } } }
+    });
     hideLoading();
     showToast(`📁 「${newStatus}」に変更しました`, 'success');
     await loadProductList();
@@ -2786,9 +3049,23 @@ async function clearUpdateFlag(pageId) {
   try {
     await notionFetch(`pages/${pageId}`, 'PATCH', { properties: { '要価格更新': { 'checkbox': false } } });
     hideLoading();
-    showToast('✅ 価格更新済みにしました', 'success');
+    showToast(t('✅ 価格更新済みにしました'), 'success');
     await loadProductList();
     setTimeout(() => showScreen('home'), 800);
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: ' + e.message, 'error');
+  }
+}
+
+async function clearRegroupFlag(pageId) {
+  showLoading('フラグを解除中...');
+  try {
+    await notionFetch(`pages/${pageId}`, 'PATCH', { properties: { '要グループ再編': { 'checkbox': false } } });
+    hideLoading();
+    showToast(t('✅ グループ再編を完了にしました'), 'success');
+    await loadProductList();
+    openDetail(pageId);
   } catch(e) {
     hideLoading();
     showToast('エラー: ' + e.message, 'error');
@@ -2801,11 +3078,13 @@ function startEdit(targetStep = 1) {
   if (!p) return;
   const pid = editingProductId;
   const props = p.properties;
+  // 編集前のグループキーを記憶（保存時にグループ再編が起きたか判定）
+  editingOldGroupKey = props['グループキー']?.rich_text?.[0]?.plain_text || groupKeyOf(props);
   const getT = (key) => props[key]?.rich_text?.[0]?.plain_text || '';
   const getN = (key) => props[key]?.number || '';
   resetForm();
   editingProductId = pid;
-  document.getElementById('register-title').textContent = '編集 — ' + currentBrand;
+  document.getElementById('register-title').textContent = t('編集') + ' — ' + currentBrand;
   document.getElementById('input-type1').value = getT('型式1');
   document.getElementById('input-type2').value = getT('型式2');
   document.getElementById('input-type3').value = getT('型式3');
@@ -2878,6 +3157,7 @@ function showToast(msg, type='') {
 
 // ===== INIT =====
 loadSettings();
+setLanguage(currentLang);  // 保存された言語を適用＋トグルラベル設定
 loadTypeMaster();
 loadProductList();
 </script>
