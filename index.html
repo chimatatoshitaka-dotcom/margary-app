@@ -506,13 +506,21 @@ body {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   background: var(--charcoal);
-  padding: 12px 16px;
-  display: none;
+  padding: 0;
+  height: 0;
+  overflow: hidden;
+  display: flex;
   gap: 10px;
   z-index: 150;
+  visibility: hidden;
+}
+.bulk-bar.active {
+  padding: 12px 16px;
+  height: auto;
+  overflow: visible;
+  visibility: visible;
   box-shadow: 0 -4px 16px rgba(0,0,0,0.2);
 }
-.bulk-bar.active { display: flex; }
 .bulk-btn {
   padding: 12px;
   border-radius: var(--radius-sm);
@@ -952,7 +960,7 @@ body {
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: 110px; left: 16px; right: 16px;
+  top: 64px; left: 16px; right: 16px;
   background: var(--charcoal);
   color: var(--white);
   padding: 14px 16px;
@@ -960,13 +968,15 @@ body {
   font-size: 14px;
   font-weight: 600;
   z-index: 300;
-  transform: translateY(150%);
+  transform: translateY(-150%);
   transition: transform 0.25s ease;
   display: flex;
   align-items: center;
   gap: 8px;
   pointer-events: none;
   box-shadow: var(--shadow-md);
+  max-width: 600px;
+  margin: 0 auto;
 }
 .toast.show { transform: translateY(0); }
 .toast.success { background: var(--green); }
